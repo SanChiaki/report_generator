@@ -11,14 +11,13 @@ The PPT mapping keeps `template_id` and `component_list`. In PPT mappings, `loca
 ## Development
 
 ```bash
-python -m pip install -e ".[dev]"
-python -m pytest
+uv run --extra dev python -m pytest
 ```
 
 ## Run
 
 ```bash
-uvicorn report_generator.api:app --reload
+uv run uvicorn report_generator.api:app --reload
 ```
 
 ## Example
@@ -26,13 +25,13 @@ uvicorn report_generator.api:app --reload
 Build the sample template:
 
 ```bash
-python examples/build_sample_template.py
+uv run --extra dev python examples/build_sample_template.py
 ```
 
 Start the API:
 
 ```bash
-uvicorn report_generator.api:app --reload
+uv run uvicorn report_generator.api:app --reload
 ```
 
 Generate a PPTX:
