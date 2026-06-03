@@ -56,6 +56,10 @@ def simple_template_bytes() -> bytes:
     badge.name = "shape.status_badge"
     badge.text = "旧状态"
 
+    image_box = slide.shapes.add_textbox(Inches(6), Inches(1.1), Inches(1.2), Inches(0.7))
+    image_box.name = "image.company_logo"
+    image_box.text = "logo"
+
     return _save(prs)
 
 
