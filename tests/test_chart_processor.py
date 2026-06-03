@@ -1,5 +1,6 @@
 from report_generator.components.chart import apply_chart
 from report_generator.components.shape import apply_shape
+from report_generator.errors import ErrorCode, ReportGenerationError
 from report_generator.models import ComponentMapping
 from report_generator.pptx.document import PptxDocument
 
@@ -48,3 +49,44 @@ def test_apply_shape_updates_text(simple_template_bytes):
     apply_shape(shape, shape_component(), "风险")
 
     assert shape.text == "风险"
+
+
+def test_apply_chart_rejects_malformed_series_item(simple_template_bytes):
+    doc = PptxDocument.open(simple_template_bytes)
+    shape = doc.shape_index()["chart.revenue_trend"].shape
+    value = {"categories": ["Q1"], "series": ["bad"]}
+
+    try:
+        apply_chart(shape, chart_component(), value)
+    except ReportGenerationError as exc:
+        assert exc.error_code == ErrorCode.CHART_DATA_INVALID
+    else:
+        raise AssertionError("Expected ReportGenerationError")
+
+
+def test_apply_chart_rejects_non_numeric_values(simple_template_bytes):
+    doc = PptxDocument.open(simple_template_bytes)
+    shape = doc.shape_index()["chart.revenue_trend"].shape
+    value = {
+        "categories": ["Q1"],
+        "series": [{"name": "收入", "values": ["bad"]}],
+    }
+
+    try:
+        apply_chart(shape, chart_component(), value)
+    except ReportGenerationError as exc:
+        assert exc.error_code == ErrorCode.CHART_DATA_INVALID
+    else:
+        raise AssertionError("Expected ReportGenerationError")
+
+
+def test_apply_shape_rejects_invalid_fill_color(simple_template_bytes):
+    doc = PptxDocument.open(simple_template_bytes)
+    shape = doc.shape_index()["shape.status_badge"].shape
+
+    try:
+        apply_shape(shape, shape_component(fill="red"), "风险")
+    except ReportGenerationError as exc:
+        assert exc.error_code == ErrorCode.DATA_SOURCE_INVALID
+    else:
+        raise AssertionError("Expected ReportGenerationError")
