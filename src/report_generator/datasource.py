@@ -3,7 +3,9 @@ from __future__ import annotations
 from typing import Any
 
 from jinja2 import StrictUndefined
+from jinja2.exceptions import TemplateError, TemplateSyntaxError, UndefinedError
 from jinja2.sandbox import SandboxedEnvironment
+from jsonpath_ng.exceptions import JSONPathError
 from jsonpath_ng import parse
 
 from report_generator.errors import ErrorCode, ReportGenerationError
@@ -25,7 +27,7 @@ def resolve_component_value(
 
     if source.template:
         base = _source_base(component, source, payload)
-        return _render_template(source.template, base)
+        return _render_template(component, source.template, base)
 
     if source.index:
         base = _source_base(component, source, payload)
@@ -54,7 +56,14 @@ def _source_base(component: ComponentMapping, source: DataSource, payload: dict[
 
 
 def _resolve_jsonpath(component: ComponentMapping, expression: str, base: Any) -> Any:
-    matches = [match.value for match in parse(expression).find(base)]
+    try:
+        matches = [match.value for match in parse(expression).find(base)]
+    except JSONPathError as exc:
+        raise ReportGenerationError(
+            ErrorCode.DATA_SOURCE_INVALID,
+            f"组件 {component.location} 的 JSONPath 表达式无效: {expression}",
+            component,
+        ) from exc
     if not matches:
         raise ReportGenerationError(
             ErrorCode.DATA_SOURCE_NOT_FOUND,
@@ -66,9 +75,30 @@ def _resolve_jsonpath(component: ComponentMapping, expression: str, base: Any) -
     return matches
 
 
-def _render_template(template: str, base: Any) -> str:
+def _render_template(component: ComponentMapping, template: str, base: Any) -> str:
     env = SandboxedEnvironment(undefined=StrictUndefined, autoescape=False)
-    return env.from_string(template).render(base)
+    try:
+        compiled = env.from_string(template)
+    except TemplateSyntaxError as exc:
+        raise ReportGenerationError(
+            ErrorCode.DATA_SOURCE_INVALID,
+            f"组件 {component.location} 的模板语法无效: {exc}",
+            component,
+        ) from exc
+    try:
+        return compiled.render(base)
+    except UndefinedError as exc:
+        raise ReportGenerationError(
+            ErrorCode.DATA_SOURCE_NOT_FOUND,
+            f"组件 {component.location} 的模板变量未找到: {exc}",
+            component,
+        ) from exc
+    except TemplateError as exc:
+        raise ReportGenerationError(
+            ErrorCode.DATA_SOURCE_INVALID,
+            f"组件 {component.location} 的模板渲染失败: {exc}",
+            component,
+        ) from exc
 
 
 def _resolve_post_processed(

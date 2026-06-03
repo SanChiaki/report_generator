@@ -94,3 +94,36 @@ def test_missing_source_raises_structured_error():
         )
 
     assert exc.value.error_code == ErrorCode.DATA_SOURCE_NOT_FOUND
+
+
+def test_invalid_jsonpath_expression_raises_structured_error():
+    with pytest.raises(ReportGenerationError) as exc:
+        resolve_component_value(
+            component({"name": "api_data", "index": "$["}),
+            {"api_data": {"title": "智慧园区"}},
+            PostProcessingRegistry(),
+        )
+
+    assert exc.value.error_code == ErrorCode.DATA_SOURCE_INVALID
+
+
+def test_missing_template_variable_raises_structured_error():
+    with pytest.raises(ReportGenerationError) as exc:
+        resolve_component_value(
+            component({"name": "api_data", "template": "{{ missing_title }}"}),
+            {"api_data": {"title": "智慧园区"}},
+            PostProcessingRegistry(),
+        )
+
+    assert exc.value.error_code == ErrorCode.DATA_SOURCE_NOT_FOUND
+
+
+def test_malformed_template_syntax_raises_structured_error():
+    with pytest.raises(ReportGenerationError) as exc:
+        resolve_component_value(
+            component({"name": "api_data", "template": "{{ title "}),
+            {"api_data": {"title": "智慧园区"}},
+            PostProcessingRegistry(),
+        )
+
+    assert exc.value.error_code == ErrorCode.DATA_SOURCE_INVALID
