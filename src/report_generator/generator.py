@@ -23,16 +23,18 @@ def generate_report(
     registry = registry or PostProcessingRegistry()
     mapping = ReportMapping.model_validate(mapping_payload)
     doc = PptxDocument.open(template_bytes)
-    index = doc.shape_index()
+    required_names = {component.location for component in mapping.component_list}
+    index = doc.shape_index(required_names=required_names)
 
     for component in mapping.component_list:
         ref = _find_component(component, index)
         if component.visible is False:
             doc.remove_shape(ref.shape)
+            index = doc.shape_index(required_names=required_names)
             continue
         value = resolve_component_value(component, business_payload, registry)
         _apply_component(doc, ref, component, value)
-        index = doc.shape_index()
+        index = doc.shape_index(required_names=required_names)
 
     return doc.to_bytes()
 

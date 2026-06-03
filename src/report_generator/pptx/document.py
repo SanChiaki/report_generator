@@ -31,13 +31,15 @@ class PptxDocument:
                 f"PPTX 模板解析失败: {exc}",
             ) from exc
 
-    def shape_index(self) -> dict[str, ShapeRef]:
+    def shape_index(self, required_names: set[str] | None = None) -> dict[str, ShapeRef]:
         index: dict[str, ShapeRef] = {}
         duplicates: list[str] = []
         for slide_index, slide in enumerate(self.presentation.slides):
             for shape in slide.shapes:
                 name = getattr(shape, "name", "")
                 if not name:
+                    continue
+                if required_names is not None and name not in required_names:
                     continue
                 if name in index:
                     duplicates.append(name)

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
 from typing import Any
 
 from pptx.util import Pt
@@ -71,6 +72,14 @@ def apply_table(
 
 def _normalize_table(value: Any, component: ComponentMapping) -> tuple[list[dict[str, str]], list[dict[str, Any]]]:
     if isinstance(value, dict) and "columns" in value and "rows" in value:
+        if not isinstance(value["columns"], list) or not isinstance(value["rows"], list):
+            raise _invalid_table_data(component)
+        for column in value["columns"]:
+            if not isinstance(column, Mapping):
+                raise _invalid_table_data(component)
+        for row in value["rows"]:
+            if not isinstance(row, Mapping):
+                raise _invalid_table_data(component)
         columns = [
             {"key": str(column.get("key")), "label": str(column.get("label", column.get("key")))}
             for column in value["columns"]
@@ -79,6 +88,9 @@ def _normalize_table(value: Any, component: ComponentMapping) -> tuple[list[dict
         return columns, rows
 
     if isinstance(value, list):
+        for row in value:
+            if not isinstance(row, Mapping):
+                raise _invalid_table_data(component)
         rows = [dict(row) for row in value]
         order = component.config.get("order")
         if order:
@@ -89,6 +101,14 @@ def _normalize_table(value: Any, component: ComponentMapping) -> tuple[list[dict
         return columns, rows
 
     raise ReportGenerationError(
+        ErrorCode.DATA_SOURCE_INVALID,
+        f"组件 {component.location} 的表格数据必须是对象数组或 columns/rows 对象",
+        component,
+    )
+
+
+def _invalid_table_data(component: ComponentMapping) -> ReportGenerationError:
+    return ReportGenerationError(
         ErrorCode.DATA_SOURCE_INVALID,
         f"组件 {component.location} 的表格数据必须是对象数组或 columns/rows 对象",
         component,

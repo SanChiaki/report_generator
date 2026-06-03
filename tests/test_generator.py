@@ -1,4 +1,6 @@
 import pytest
+from pptx import Presentation
+from pptx.util import Inches
 
 from report_generator.errors import ErrorCode, ReportGenerationError
 from report_generator.generator import generate_report
@@ -60,3 +62,41 @@ def test_generate_report_rejects_missing_component(simple_template_bytes):
         generate_report(simple_template_bytes, mapping, {"api_data": "value"}, PostProcessingRegistry())
 
     assert exc.value.error_code == ErrorCode.COMPONENT_NOT_FOUND
+
+
+def test_generate_report_ignores_duplicate_unmapped_shape_names():
+    prs = Presentation()
+    for slide_index in range(2):
+        slide = prs.slides.add_slide(prs.slide_layouts[6])
+        mapped = slide.shapes.add_textbox(Inches(0.5), Inches(0.5), Inches(4), Inches(0.5))
+        mapped.name = f"text.title_{slide_index}"
+        mapped.text = "旧标题"
+        unmapped = slide.shapes.add_textbox(Inches(0.5), Inches(1.0), Inches(4), Inches(0.5))
+        unmapped.name = "TextBox 2"
+        unmapped.text = "未映射"
+
+    template = _presentation_bytes(prs)
+    mapping = {
+        "template_id": "project-monthly-report-ppt-v1",
+        "component_list": [
+            {
+                "location": "text.title_0",
+                "semantic_description": "第一页标题",
+                "type": "Text",
+                "data_source": {"name": "title"},
+            }
+        ],
+    }
+
+    output = generate_report(template, mapping, {"title": "新标题"}, PostProcessingRegistry())
+    doc = PptxDocument.open(output)
+
+    assert doc.shape_index(required_names={"text.title_0"})["text.title_0"].shape.text_frame.text == "新标题"
+
+
+def _presentation_bytes(prs: Presentation) -> bytes:
+    from io import BytesIO
+
+    output = BytesIO()
+    prs.save(output)
+    return output.getvalue()

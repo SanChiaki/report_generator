@@ -70,3 +70,24 @@ def test_apply_table_accepts_columns_rows_object(simple_template_bytes):
 
     assert new_shape.table.cell(0, 0).text == "风险类型"
     assert new_shape.table.cell(1, 1).text == "设备到货存在延期风险"
+
+
+def test_apply_table_rejects_non_object_rows(simple_template_bytes):
+    doc = PptxDocument.open(simple_template_bytes)
+    shape = doc.shape_index()["table.top_risks"].shape
+
+    with pytest.raises(ReportGenerationError) as exc:
+        apply_table(doc, shape, table_component(order=["风险类型"]), ["not-a-row"])
+
+    assert exc.value.error_code == ErrorCode.DATA_SOURCE_INVALID
+
+
+def test_apply_table_rejects_non_object_columns(simple_template_bytes):
+    doc = PptxDocument.open(simple_template_bytes)
+    shape = doc.shape_index()["table.top_risks"].shape
+    value = {"columns": ["bad"], "rows": [{"bad": "value"}]}
+
+    with pytest.raises(ReportGenerationError) as exc:
+        apply_table(doc, shape, table_component(), value)
+
+    assert exc.value.error_code == ErrorCode.DATA_SOURCE_INVALID
