@@ -1,9 +1,11 @@
 import base64
 from io import BytesIO
 
+import pytest
 from PIL import Image
 
 from report_generator.components.image import apply_image
+from report_generator.errors import ErrorCode, ReportGenerationError
 from report_generator.models import ComponentMapping
 from report_generator.pptx.document import PptxDocument
 
@@ -35,3 +37,15 @@ def test_apply_image_replaces_region_with_picture(simple_template_bytes):
 
     assert new_shape.name == "image.company_logo"
     assert "PICTURE" in str(new_shape.shape_type)
+
+
+def test_apply_image_keeps_placeholder_when_picture_bytes_are_invalid(simple_template_bytes):
+    doc = PptxDocument.open(simple_template_bytes)
+    shape = doc.shape_index()["image.company_logo"].shape
+    invalid_data_uri = "data:image/png;base64," + base64.b64encode(b"not an image").decode("ascii")
+
+    with pytest.raises(ReportGenerationError) as exc:
+        apply_image(doc, shape, image_component(), invalid_data_uri)
+
+    assert exc.value.error_code == ErrorCode.IMAGE_LOAD_FAILED
+    assert "image.company_logo" in doc.shape_index()

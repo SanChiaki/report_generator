@@ -20,8 +20,16 @@ def apply_image(
     image_bytes = _load_image_bytes(component, value)
     x, y, cx, cy = shape.left, shape.top, shape.width, shape.height
     slide = shape.part.slide
+    try:
+        new_shape = slide.shapes.add_picture(BytesIO(image_bytes), x, y, width=cx, height=cy)
+    except Exception as exc:
+        raise ReportGenerationError(
+            ErrorCode.IMAGE_LOAD_FAILED,
+            f"组件 {component.location} 的图片加载失败: {exc}",
+            component,
+        ) from exc
+
     doc.remove_shape(shape)
-    new_shape = slide.shapes.add_picture(BytesIO(image_bytes), x, y, width=cx, height=cy)
     new_shape.name = component.location
     return new_shape
 
