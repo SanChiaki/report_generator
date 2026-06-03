@@ -20,3 +20,27 @@ python -m pytest
 ```bash
 uvicorn report_generator.api:app --reload
 ```
+
+## Example
+
+Build the sample template:
+
+```bash
+python examples/build_sample_template.py
+```
+
+Start the API:
+
+```bash
+uvicorn report_generator.api:app --reload
+```
+
+Generate a PPTX:
+
+```bash
+curl -X POST http://127.0.0.1:8000/reports/pptx \
+  -F template=@examples/sample_template.pptx \
+  -F mapping=@examples/mapping.json \
+  -F payload=@examples/payload.json \
+  --output examples/output_report.pptx
+```

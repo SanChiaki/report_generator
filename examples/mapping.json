@@ -1,0 +1,32 @@
+{
+  "template_id": "project-monthly-report-ppt-v1",
+  "component_list": [
+    {
+      "location": "text.report_title",
+      "semantic_description": "报告标题",
+      "type": "Text",
+      "data_source": {
+        "name": "api_data",
+        "template": "{{ 全量数据.项目概览.项目名称 }}-报告"
+      },
+      "config": {
+        "min_font_size": 12
+      }
+    },
+    {
+      "location": "table.top_risks",
+      "semantic_description": "TOP问题与风险",
+      "type": "Table",
+      "config": {
+        "order": ["风险类型", "风险描述"],
+        "fit": "fixed_region",
+        "min_font_size": 8,
+        "max_rows": 20,
+        "max_columns": 8
+      },
+      "data_source": {
+        "name": "risks"
+      }
+    }
+  ]
+}
