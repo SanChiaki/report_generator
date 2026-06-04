@@ -1,31 +1,292 @@
 {
-  "template_id": "project-monthly-report-ppt-v1",
+  "template_id": "project-monthly-report-ppt-v2",
   "component_list": [
     {
+      "location": "image.company_logo",
+      "semantic_description": "公司 Logo",
+      "type": "Image",
+      "data_source": {
+        "name": "logo"
+      }
+    },
+    {
       "location": "text.report_title",
-      "semantic_description": "报告标题",
+      "semantic_description": "封面报告标题",
       "type": "Text",
       "data_source": {
         "name": "api_data",
-        "template": "{{ 全量数据.项目概览.项目名称 }}-报告"
+        "template": "{{ 全量数据.项目概览.项目名称 }}{{ 全量数据.项目概览.报告类型 }}"
       },
       "config": {
+        "min_font_size": 18
+      }
+    },
+    {
+      "location": "text.report_period",
+      "semantic_description": "报告周期与负责人",
+      "type": "Text",
+      "data_source": {
+        "name": "api_data",
+        "template": "周期：{{ 全量数据.项目概览.报告周期 }}｜负责人：{{ 全量数据.项目概览.负责人 }}"
+      },
+      "config": {
+        "min_font_size": 9
+      }
+    },
+    {
+      "location": "text.executive_summary",
+      "semantic_description": "管理层摘要",
+      "type": "Text",
+      "data_source": {
+        "name": "api_data",
+        "index": "$.全量数据.项目概览.摘要"
+      },
+      "config": {
+        "font_size": 18,
         "min_font_size": 12
       }
     },
     {
-      "location": "table.top_risks",
-      "semantic_description": "TOP问题与风险",
+      "location": "shape.project_status_badge",
+      "semantic_description": "项目整体状态",
+      "type": "Shape",
+      "data_source": {
+        "name": "api_data",
+        "index": "$.全量数据.项目概览.整体状态"
+      },
+      "config": {
+        "state_styles": {
+          "正常": {
+            "fill": "#16A34A",
+            "line": "#16A34A"
+          },
+          "关注": {
+            "fill": "#F59E0B",
+            "line": "#F59E0B"
+          },
+          "高风险": {
+            "fill": "#DC2626",
+            "line": "#DC2626"
+          }
+        }
+      }
+    },
+    {
+      "location": "text.kpi_progress",
+      "semantic_description": "项目完成率 KPI",
+      "type": "Text",
+      "data_source": {
+        "name": "api_data",
+        "template": "{{ 全量数据.核心指标.完成率 }}%"
+      },
+      "config": {
+        "min_font_size": 14
+      }
+    },
+    {
+      "location": "text.kpi_budget",
+      "semantic_description": "预算使用率 KPI",
+      "type": "Text",
+      "data_source": {
+        "name": "api_data",
+        "template": "{{ 全量数据.核心指标.预算使用率 }}%"
+      },
+      "config": {
+        "min_font_size": 14
+      }
+    },
+    {
+      "location": "text.kpi_risks",
+      "semantic_description": "风险数量 KPI",
+      "type": "Text",
+      "data_source": {
+        "name": "api_data",
+        "template": "{{ 全量数据.核心指标.风险数量 }} 个"
+      },
+      "config": {
+        "min_font_size": 14
+      }
+    },
+    {
+      "location": "table.key_metrics",
+      "semantic_description": "核心指标表",
       "type": "Table",
       "config": {
-        "order": ["风险类型", "风险描述"],
         "fit": "fixed_region",
         "min_font_size": 8,
+        "max_rows": 12,
+        "max_columns": 8
+      },
+      "data_source": {
+        "name": "key_metrics"
+      }
+    },
+    {
+      "location": "text.risk_title",
+      "semantic_description": "风险页标题",
+      "type": "Text",
+      "data_source": {
+        "name": "risk_page_title"
+      }
+    },
+    {
+      "location": "text.risk_summary",
+      "semantic_description": "风险摘要",
+      "type": "Text",
+      "data_source": {
+        "name": "risk_summary"
+      },
+      "config": {
+        "min_font_size": 10
+      }
+    },
+    {
+      "location": "shape.risk_status_badge",
+      "semantic_description": "风险状态徽标",
+      "type": "Shape",
+      "data_source": {
+        "name": "risk_status"
+      },
+      "config": {
+        "state_styles": {
+          "可控": {
+            "fill": "#16A34A",
+            "line": "#16A34A"
+          },
+          "需关注": {
+            "fill": "#F59E0B",
+            "line": "#F59E0B"
+          },
+          "升级处理": {
+            "fill": "#DC2626",
+            "line": "#DC2626"
+          }
+        }
+      }
+    },
+    {
+      "location": "table.top_risks",
+      "semantic_description": "TOP 风险列表",
+      "type": "Table",
+      "config": {
+        "fit": "fixed_region",
+        "font_size": 10,
+        "min_font_size": 7,
         "max_rows": 20,
         "max_columns": 8
       },
       "data_source": {
-        "name": "risks"
+        "name": "top_risks"
+      }
+    },
+    {
+      "location": "table.milestones",
+      "semantic_description": "关键里程碑列表",
+      "type": "Table",
+      "config": {
+        "fit": "fixed_region",
+        "font_size": 9,
+        "min_font_size": 7,
+        "max_rows": 20,
+        "max_columns": 8
+      },
+      "data_source": {
+        "name": "milestones"
+      }
+    },
+    {
+      "location": "text.delivery_title",
+      "semantic_description": "交付页标题",
+      "type": "Text",
+      "data_source": {
+        "name": "delivery_page_title"
+      }
+    },
+    {
+      "location": "chart.progress_trend",
+      "semantic_description": "交付完成率趋势",
+      "type": "Chart",
+      "config": {
+        "max_categories": 12,
+        "max_series": 3
+      },
+      "data_source": {
+        "name": "progress_chart"
+      }
+    },
+    {
+      "location": "chart.budget_usage",
+      "semantic_description": "预算使用趋势",
+      "type": "Chart",
+      "config": {
+        "max_categories": 12,
+        "max_series": 3
+      },
+      "data_source": {
+        "name": "budget_chart"
+      }
+    },
+    {
+      "location": "text.quality_score",
+      "semantic_description": "质量得分",
+      "type": "Text",
+      "data_source": {
+        "name": "api_data",
+        "template": "{{ 全量数据.质量.质量得分 }}"
+      },
+      "config": {
+        "min_font_size": 14
+      }
+    },
+    {
+      "location": "shape.quality_badge",
+      "semantic_description": "质量状态",
+      "type": "Shape",
+      "data_source": {
+        "name": "api_data",
+        "index": "$.全量数据.质量.质量状态"
+      },
+      "config": {
+        "state_styles": {
+          "达标": {
+            "fill": "#16A34A",
+            "line": "#16A34A"
+          },
+          "关注": {
+            "fill": "#F59E0B",
+            "line": "#F59E0B"
+          },
+          "未达标": {
+            "fill": "#DC2626",
+            "line": "#DC2626"
+          }
+        }
+      }
+    },
+    {
+      "location": "table.next_actions",
+      "semantic_description": "下月动作清单",
+      "type": "Table",
+      "config": {
+        "fit": "fixed_region",
+        "font_size": 9,
+        "min_font_size": 7,
+        "max_rows": 12,
+        "max_columns": 6
+      },
+      "data_source": {
+        "name": "next_actions"
+      }
+    },
+    {
+      "location": "text.next_step_summary",
+      "semantic_description": "下月重点摘要",
+      "type": "Text",
+      "data_source": {
+        "name": "next_step_summary"
+      },
+      "config": {
+        "min_font_size": 10
       }
     }
   ]
