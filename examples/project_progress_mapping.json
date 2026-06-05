@@ -1,0 +1,147 @@
+{
+  "template_id": "project-progress-report-v1",
+  "component_list": [
+    {
+      "location": "text.cover_title",
+      "semantic_description": "封面标题",
+      "type": "Text",
+      "config": {
+        "preserve_style": true
+      },
+      "data_source": {
+        "name": "project",
+        "template": "{{ 项目名称 }}项目进展报告"
+      }
+    },
+    {
+      "location": "text.cover_period",
+      "semantic_description": "报告周期",
+      "type": "Text",
+      "config": {
+        "preserve_style": true
+      },
+      "data_source": {
+        "name": "project",
+        "template": "报告周期：{{ 报告周期开始 }}至{{ 报告周期结束 }}"
+      }
+    },
+    {
+      "location": "text.cover_report_date",
+      "semantic_description": "封面报告日期",
+      "type": "Text",
+      "config": {
+        "preserve_style": true
+      },
+      "data_source": {
+        "name": "project",
+        "template": "报告日期：{{ 报告日期 }}"
+      }
+    },
+    {
+      "location": "table.project_info",
+      "semantic_description": "项目信息",
+      "type": "Table",
+      "config": {
+        "max_rows": 7,
+        "max_columns": 2
+      },
+      "data_source": {
+        "name": "project_info"
+      }
+    },
+    {
+      "location": "table.project_dashboard",
+      "semantic_description": "项目仪表盘",
+      "type": "Table",
+      "config": {
+        "max_rows": 6,
+        "max_columns": 2
+      },
+      "data_source": {
+        "name": "dashboard"
+      }
+    },
+    {
+      "location": "text.overall_progress_summary",
+      "semantic_description": "项目整体进展摘要",
+      "type": "Text",
+      "config": {
+        "preserve_style": true
+      },
+      "data_source": {
+        "name": "overall_progress_summary"
+      }
+    },
+    {
+      "location": "table.overall_progress",
+      "semantic_description": "项目整体进展表",
+      "type": "Table",
+      "config": {
+        "max_rows": 4,
+        "max_columns": 4
+      },
+      "data_source": {
+        "name": "overall_progress"
+      }
+    },
+    {
+      "location": "table.delivery_plan",
+      "semantic_description": "项目交付计划",
+      "type": "Table",
+      "config": {
+        "max_rows": 6,
+        "max_columns": 5
+      },
+      "data_source": {
+        "name": "delivery_plan"
+      }
+    },
+    {
+      "location": "table.task_details",
+      "semantic_description": "任务详情",
+      "type": "Table",
+      "config": {
+        "max_rows": 8,
+        "max_columns": 4
+      },
+      "data_source": {
+        "name": "task_details"
+      }
+    },
+    {
+      "location": "table.top_issues_risks",
+      "semantic_description": "TOP 问题及风险",
+      "type": "Table",
+      "config": {
+        "max_rows": 6,
+        "max_columns": 5
+      },
+      "data_source": {
+        "name": "top_issues_risks"
+      }
+    },
+    {
+      "location": "text.current_progress_summary",
+      "semantic_description": "当前进展摘要",
+      "type": "Text",
+      "config": {
+        "preserve_style": true
+      },
+      "data_source": {
+        "name": "current_progress_summary"
+      }
+    },
+    {
+      "location": "table.current_progress",
+      "semantic_description": "当前进展表",
+      "type": "Table",
+      "config": {
+        "max_rows": 4,
+        "max_columns": 3
+      },
+      "data_source": {
+        "name": "current_progress"
+      }
+    }
+  ]
+}

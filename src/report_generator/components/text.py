@@ -22,6 +22,16 @@ def apply_text(shape: Any, component: ComponentMapping, value: Any) -> None:
     text = "" if value is None else str(value)
     min_font_size = int(component.config.get("min_font_size", 10))
     start_font_size = _existing_font_size(shape) or int(component.config.get("font_size", 18))
+    if component.config.get("preserve_style"):
+        if not _fits(shape, text, start_font_size):
+            raise ReportGenerationError(
+                ErrorCode.TEXT_OVERFLOW,
+                f"组件 {component.location} 的文本在模板原始字号 {start_font_size} 下无法放入模板区域",
+                component,
+            )
+        _apply_text_preserving_style(shape, text)
+        return
+
     fitted_font_size = _fit_font_size(shape, text, start_font_size, min_font_size)
     if fitted_font_size is None:
         raise ReportGenerationError(
@@ -38,6 +48,26 @@ def apply_text(shape: Any, component: ComponentMapping, value: Any) -> None:
         run = paragraph.add_run()
         run.text = line
         run.font.size = Pt(fitted_font_size)
+
+
+def _apply_text_preserving_style(shape: Any, text: str) -> None:
+    text_frame = shape.text_frame
+    lines = text.splitlines() or [""]
+    for paragraph_index, line in enumerate(lines):
+        if paragraph_index < len(text_frame.paragraphs):
+            paragraph = text_frame.paragraphs[paragraph_index]
+        else:
+            paragraph = text_frame.add_paragraph()
+        if paragraph.runs:
+            paragraph.runs[0].text = line
+            for run in paragraph.runs[1:]:
+                run.text = ""
+        else:
+            paragraph.add_run().text = line
+
+    for paragraph in text_frame.paragraphs[len(lines) :]:
+        for run in paragraph.runs:
+            run.text = ""
 
 
 def _existing_font_size(shape: Any) -> int | None:
