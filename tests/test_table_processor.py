@@ -105,6 +105,32 @@ def test_apply_table_accepts_columns_rows_object(simple_template_bytes):
     assert new_shape.table.cell(1, 1).text == "设备到货存在延期风险"
 
 
+def test_apply_table_accepts_cells_matrix_without_header(simple_template_bytes):
+    doc = PptxDocument.open(simple_template_bytes)
+    shape = doc.shape_index()["table.top_risks"].shape
+    shape.table.cell(0, 0).text_frame.paragraphs[0].runs[0].font.bold = True
+    shape.table.cell(0, 1).text = ""
+    shape.table.cell(1, 1).fill.solid()
+    shape.table.cell(1, 1).fill.fore_color.rgb = RGBColor(0xAB, 0xCD, 0xEF)
+    body_fill = shape.table.cell(1, 1).fill.fore_color.rgb
+    value = {
+        "cells": [
+            ["项目名称", "智慧园区", "项目编码", "PRJ-2025-001"],
+            ["客户名称", "示例客户集团", "项目 PD", "张明"],
+        ]
+    }
+
+    new_shape = apply_table(doc, shape, table_component(), value)
+
+    assert len(new_shape.table.rows) == 2
+    assert len(new_shape.table.columns) == 4
+    assert new_shape.table.cell(0, 0).text == "项目名称"
+    assert new_shape.table.cell(0, 1).text == "智慧园区"
+    assert new_shape.table.cell(0, 1).text_frame.paragraphs[0].runs[0].font.bold is True
+    assert new_shape.table.cell(1, 3).text == "张明"
+    assert new_shape.table.cell(1, 3).fill.fore_color.rgb == body_fill
+
+
 def test_apply_table_preserves_existing_table_shape_and_style(simple_template_bytes):
     doc = PptxDocument.open(simple_template_bytes)
     shape = doc.shape_index()["table.top_risks"].shape
@@ -126,6 +152,43 @@ def test_apply_table_preserves_existing_table_shape_and_style(simple_template_by
     assert updated_shape.table.cell(0, 0).text == "风险类型"
     assert updated_shape.table.cell(1, 1).text == "设备到货存在延期风险"
     assert updated_shape.table.cell(0, 0).fill.fore_color.rgb == original_header_fill
+
+
+def test_apply_table_preserve_style_accepts_cells_matrix(simple_template_bytes):
+    doc = PptxDocument.open(simple_template_bytes)
+    shape = doc.shape_index()["table.top_risks"].shape
+    original_shape_id = shape.shape_id
+    value = {"cells": [["项目名称", "智慧园区"], ["客户名称", "示例客户集团"]]}
+
+    updated_shape = apply_table(doc, shape, table_component(preserve_style=True), value)
+
+    assert updated_shape.shape_id == original_shape_id
+    assert updated_shape.table.cell(0, 0).text == "项目名称"
+    assert updated_shape.table.cell(0, 1).text == "智慧园区"
+    assert updated_shape.table.cell(1, 0).text == "客户名称"
+    assert updated_shape.table.cell(1, 1).text == "示例客户集团"
+
+
+def test_apply_table_replaces_cell_placeholders_without_rebuilding(simple_template_bytes):
+    doc = PptxDocument.open(simple_template_bytes)
+    shape = doc.shape_index()["table.top_risks"].shape
+    original_shape_id = shape.shape_id
+    shape.table.cell(0, 1).text = "{{ 项目名称 }}"
+    shape.table.cell(0, 0).text_frame.paragraphs[0].runs[0].font.bold = True
+
+    updated_shape = apply_table(
+        doc,
+        shape,
+        table_component(mode="placeholders"),
+        {"项目名称": "智慧园区"},
+    )
+
+    assert updated_shape.shape_id == original_shape_id
+    assert len(updated_shape.table.rows) == 2
+    assert len(updated_shape.table.columns) == 2
+    assert updated_shape.table.cell(0, 0).text == "风险类型"
+    assert updated_shape.table.cell(0, 1).text == "智慧园区"
+    assert updated_shape.table.cell(0, 1).text_frame.paragraphs[0].runs[0].font.bold is True
 
 
 def test_apply_table_preserve_style_rejects_when_template_has_insufficient_rows(simple_template_bytes):

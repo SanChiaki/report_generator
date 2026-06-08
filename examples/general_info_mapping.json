@@ -1,0 +1,27 @@
+{
+  "template_id": "general-info-report-v1",
+  "component_list": [
+    {
+      "location": "text.project_info_title",
+      "semantic_description": "项目信息页标题",
+      "type": "Text",
+      "config": {
+        "preserve_style": true
+      },
+      "data_source": {
+        "name": "project_info_title"
+      }
+    },
+    {
+      "location": "table.project_info",
+      "semantic_description": "项目信息键值表单，占位符填充",
+      "type": "Table",
+      "config": {
+        "mode": "placeholders"
+      },
+      "data_source": {
+        "name": "project_info"
+      }
+    }
+  ]
+}
