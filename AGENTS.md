@@ -1,0 +1,355 @@
+# AGENTS.md
+
+本仓库是一个 PPTX 报告生成服务：输入 PowerPoint 模板、mapping JSON 和业务 payload JSON，输出生成后的 PPTX 报告。后续 agent 修改本项目时，应优先保持模板样式不变，只替换数据；除非 mapping 显式配置样式，否则不要主动改字体、颜色、边框、行高或布局。
+
+## 常用命令
+
+```bash
+uv run --extra dev python -m pytest -q
+uv run uvicorn report_generator.api:app --reload
+```
+
+API 入口：
+
+```http
+POST /reports/pptx
+multipart/form-data:
+  template=@template.pptx
+  mapping=@mapping.json
+  payload=@payload.json
+```
+
+核心生成函数：
+
+```python
+from report_generator.generator import generate_report
+
+output_bytes = generate_report(template_bytes, mapping_json, payload_json)
+```
+
+## 核心流程
+
+1. 模板中每个可替换组件必须在 PowerPoint 选择窗格里设置唯一名称。
+2. mapping 的 `component_list[].location` 必须与模板 shape 名称完全一致。
+3. 生成时先按 mapping 找到模板组件，再通过 `data_source` 从 payload 取值，最后按组件类型写回 PPT。
+4. `visible: false` 会删除该组件。
+5. 映射到同一批组件里的 shape 名称不能重复，否则会报 `DUPLICATE_COMPONENT_NAME`。
+
+## Mapping 结构
+
+顶层结构保持与 Excel 报告生成能力接近：
+
+```json
+{
+  "template_id": "project-report-v1",
+  "component_list": [
+    {
+      "location": "text.report_title",
+      "semantic_description": "报告标题",
+      "type": "Text",
+      "config": {
+        "preserve_style": true
+      },
+      "data_source": {
+        "name": "project",
+        "template": "{{ 项目名称 }}项目进展报告"
+      }
+    }
+  ]
+}
+```
+
+组件字段：
+
+- `location`: PPT 选择窗格里的 shape 名称。
+- `semantic_description`: 组件语义说明，便于理解和生成 mapping。
+- `type`: 组件类型。当前实际支持 `Text`、`Image`、`Table`、`Chart`、`Shape`。`Milestone` 和 `GanttChart` 只是模型中预留的类型，当前生成器未实现，mapping 中不要使用。
+- `config`: 组件配置。默认应少配样式，保留模板原样式。
+- `data_source`: 数据来源描述。
+- `visible`: 为 `false` 时删除组件。
+- `prompt`、`data_example`: 可保留为上游生成 mapping 的辅助字段，运行时不强依赖。
+
+`data_source` 支持：
+
+- `name`: 从 payload 顶层读取同名数据。
+- `index`: 在 `name` 指定的数据源内执行 JSONPath；未设置 `name` 时基于整个 payload。
+- `template`: 用 Jinja 模板渲染文本；未设置 `name` 时基于整个 payload。
+- `needs_post_processing`: 为 `true` 时通过注册的后处理函数取值。
+- `params`: 后处理函数参数映射。
+
+示例：
+
+```json
+{
+  "data_source": {
+    "name": "project",
+    "index": "$.基础信息.项目名称"
+  }
+}
+```
+
+```json
+{
+  "data_source": {
+    "name": "project",
+    "template": "报告周期：{{ 开始日期 }}至{{ 结束日期 }}"
+  }
+}
+```
+
+## 支持的组件
+
+### Text
+
+用途：替换文本框、标题、占位符中的文本。
+
+数据：任意值，最终会转成字符串。
+
+常用配置：
+
+- `preserve_style: true`: 保留原 run 样式，仅替换文本。若原字号放不下新文本，会报 `TEXT_OVERFLOW`。
+- `font_size`: 未保留样式时的起始字号。
+- `min_font_size`: 自动缩小字号时的最小字号。
+
+建议：模板文本组件默认使用 `preserve_style: true`，让字号、颜色、粗细由模板决定。
+
+### Table
+
+用途：替换表格数据。表格默认支持动态增行/增列，并复制模板表格样式。
+
+常用配置：
+
+- `max_rows`: 最大数据行数，默认 `30`。
+- `max_columns`: 最大列数，默认 `10`。
+- `order`: 当数据是对象数组时，指定列顺序。
+- `font_size`: 写入后强制设置字号。
+- `preserve_style: true`: 严格原位填充，不增行、不增列；数据超过模板预留行列会报 `TABLE_OVERFLOW`。
+- `mode: "placeholders"`: 表格内占位符填充模式，不重建表格。
+
+表格有三种数据形态：
+
+1. 普通动态表格，适合列表数据：
+
+```json
+{
+  "columns": [
+    {"key": "task", "label": "任务"},
+    {"key": "owner", "label": "负责人"}
+  ],
+  "rows": [
+    {"task": "接口联调", "owner": "张明"},
+    {"task": "验收测试", "owner": "李强"}
+  ]
+}
+```
+
+2. 对象数组，列由 `config.order` 或第一行 key 推断：
+
+```json
+[
+  {"阶段名称": "开发联调", "任务名称": "接口联调", "任务状态": "完成"},
+  {"阶段名称": "验收测试", "任务名称": "测试执行", "任务状态": "进行中"}
+]
+```
+
+3. `cells` 矩阵，适合少量非表头网格；固定键值表单更推荐占位符模式：
+
+```json
+{
+  "cells": [
+    ["项目名称", "智能制造中台项目", "项目编码", "PRJ-2025-1225"],
+    ["客户名称", "星河科技集团", "项目 PD", "张明"]
+  ]
+}
+```
+
+固定键值表单推荐使用占位符模式。模板表格的值单元格写入：
+
+```text
+{{ 项目名称 }}
+{{ 项目编码 }}
+{{ 客户名称 }}
+```
+
+mapping：
+
+```json
+{
+  "location": "table.project_info",
+  "semantic_description": "项目信息键值表单，占位符填充",
+  "type": "Table",
+  "config": {
+    "mode": "placeholders"
+  },
+  "data_source": {
+    "name": "project_info"
+  }
+}
+```
+
+payload：
+
+```json
+{
+  "project_info": {
+    "项目名称": "智能制造中台项目",
+    "项目编码": "PRJ-2025-1225",
+    "客户名称": "星河科技集团"
+  }
+}
+```
+
+### Image
+
+用途：用图片替换模板中的占位 shape。
+
+数据可以是：
+
+- 本地文件路径。
+- HTTP/HTTPS URL。
+- base64 data URL。
+- 对象形式：`{"src": "..."}`。
+
+生成时会按原 shape 的 `left/top/width/height` 插入图片，并删除原 shape。图片占位符的边框、填充等形状样式不会保留；需要视觉框时，应在模板中使用独立背景/边框形状。
+
+### Chart
+
+用途：替换 PowerPoint 原生图表的数据，尽量保留原图表样式。
+
+数据结构：
+
+```json
+{
+  "categories": ["一月", "二月", "三月"],
+  "series": [
+    {"name": "完成数", "values": [10, 18, 24]},
+    {"name": "延期数", "values": [1, 2, 1]}
+  ]
+}
+```
+
+常用配置：
+
+- `max_categories`: 最大分类数，默认 `24`。
+- `max_series`: 最大系列数，默认 `6`。
+
+要求：每个 series 的 `values` 长度必须与 `categories` 一致，且 values 必须是数字。
+
+### Shape
+
+用途：更新普通形状文本，或根据状态改形状颜色/线条。
+
+数据：任意值，若 shape 有 `text` 属性，会转成字符串写入。
+
+配置：
+
+```json
+{
+  "fill": "#00A896",
+  "line": "#028090",
+  "state_styles": {
+    "正常": {"fill": "#00A896"},
+    "风险": {"fill": "#F96167", "line": "#990011"}
+  }
+}
+```
+
+只有配置了 `fill`、`line` 或 `state_styles` 时才改样式。
+
+## 如何构造模板
+
+### 通用规则
+
+1. 先在 PowerPoint 中完成全部视觉设计。
+2. 需要替换的组件在选择窗格中改成稳定名称，例如 `text.cover_title`、`table.task_details`、`chart.progress`。
+3. 同一个 mapping 里引用的组件名必须唯一。
+4. 不要依赖默认的 `TextBox 1`、`Table 4` 这类自动名称。
+5. 固定位置固定字段优先用占位符；动态列表优先用动态表格。
+6. 模板样式应该由 PPT 决定，mapping 只表达数据和必要限制。
+
+### 文本模板
+
+文本框先放一段示例文本，设置好字号、颜色、粗细和位置。mapping 中使用 `Text` + `preserve_style: true`。
+
+```json
+{
+  "location": "text.cover_title",
+  "type": "Text",
+  "config": {"preserve_style": true},
+  "data_source": {
+    "name": "project",
+    "template": "{{ 项目名称 }}项目进展报告"
+  }
+}
+```
+
+### 固定表单模板
+
+适合项目信息、客户信息、基本信息等键值表格：
+
+1. 在 PPT 表格中保留固定行列。
+2. 标签单元格写固定文字，如 `项目名称`。
+3. 值单元格写 Jinja 占位符，如 `{{ 项目名称 }}`。
+4. mapping 使用 `Table` + `config.mode = "placeholders"`。
+5. payload 提供一个对象，key 与占位符变量一致。
+
+这种模式不会重建表格，最能保持原表格边框、行高、列宽和填充。
+
+### 动态表格模板
+
+适合任务列表、风险列表、交付计划等行数/列数可能变化的数据：
+
+1. 在 PPT 中放一个示例表格，至少包含表头行和一行正文样式。
+2. 表头行负责提供表头样式。
+3. 正文行负责提供新增行复制样式。
+4. mapping 使用 `Table`，不要设置 `preserve_style`。
+5. 数据使用 `columns/rows` 或对象数组。
+
+默认动态模式会删除原表格，按数据行列数创建新表格，并复制原表格单元格样式。新增行会复用正文行样式；新增列会复用模板最后一列样式。
+
+如果表格行列必须固定，设置 `preserve_style: true`，但这样不会动态增行/增列。
+
+### 图表模板
+
+1. 在 PPT 中插入真实 PowerPoint 图表。
+2. 设置好图表颜色、坐标轴、图例、标题等样式。
+3. 在选择窗格中命名为 `chart.xxx`。
+4. mapping 使用 `Chart`，payload 传入 `categories` 和 `series`。
+
+### 图片模板
+
+1. 在 PPT 中放一个图片占位 shape 或示例图片。
+2. 在选择窗格中命名为 `image.xxx`。
+3. mapping 使用 `Image`。
+4. payload 提供图片路径、URL 或 data URL。
+
+注意：图片组件会删除原 shape 并插入新图片；若需要固定边框或背景，请把边框/背景做成单独 shape，不要依赖图片占位 shape 自身样式。
+
+## 示例文件
+
+- `examples/general_info_template.pptx`: 固定项目信息表单，占位符填充。
+- `examples/general_info_mapping.json`: 占位符表格 mapping 示例。
+- `examples/general_info_payload.json`: 占位符表格 mock payload。
+- `examples/general_info_report.pptx`: 由上述模板和 payload 生成的报告。
+- `examples/project_progress_template.pptx`: 多页项目进展报告模板。
+- `examples/project_progress_mapping.json`: 多组件 mapping 示例。
+- `examples/project_progress_payload.json`: 多组件 mock payload。
+- `examples/project_progress_report.pptx`: 生成后的项目进展报告。
+
+## 验证要求
+
+修改代码或示例后至少运行：
+
+```bash
+uv run --extra dev python -m pytest -q
+```
+
+涉及 PPTX 模板或生成结果时，建议用 LibreOffice 渲染成 PDF/PNG 做视觉检查，重点看：
+
+- 文本是否溢出或被裁切。
+- 表格边框、行高、填充色是否保留。
+- 占位符是否全部替换。
+- 图片是否按预期位置和比例显示。
+- 图表系列和分类是否正确。
+
+不要把临时渲染产物提交进仓库，除非用户明确要求。
