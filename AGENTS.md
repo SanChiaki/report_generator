@@ -9,6 +9,19 @@ uv run --extra dev python -m pytest -q
 uv run uvicorn report_generator.api:app --reload
 ```
 
+大模型后处理使用 OpenAI-compatible chat completions 接口，默认从 `.env` 或环境变量读取：
+
+```dotenv
+API_KEY=...
+BASE_URL=https://example.com/v1
+MODEL=gpt-4o-mini
+COMPLETION_MODE=chat
+LLM_CONCURRENCY=4
+```
+
+`COMPLETION_MODE=chat` 使用 `/chat/completions`；`COMPLETION_MODE=completions` 使用 legacy `/completions`。
+`LLM_CONCURRENCY` 控制大模型后处理默认总并发数，默认值为 `4`。同步和异步接口也支持 multipart 表单字段 `llmConcurrency` 覆盖本次请求的并发数。
+
 API 入口：
 
 ```http
@@ -17,6 +30,15 @@ multipart/form-data:
   template=@template.pptx
   mapping=@mapping.json
   payload=@payload.json
+  llmConcurrency=4
+```
+
+异步生成接口：
+
+```http
+POST /reports/pptx/tasks
+GET /reports/pptx/tasks?taskId=...
+GET /reports/pptx/tasks/download?taskId=...
 ```
 
 核心生成函数：
@@ -74,7 +96,7 @@ output_bytes = generate_report(template_bytes, mapping_json, payload_json)
 - `name`: 从 payload 顶层读取同名数据。
 - `index`: 在 `name` 指定的数据源内执行 JSONPath；未设置 `name` 时基于整个 payload。
 - `template`: 用 Jinja 模板渲染文本；未设置 `name` 时基于整个 payload。
-- `needs_post_processing`: 为 `true` 时通过注册的后处理函数取值。
+- `needs_post_processing`: 为 `true` 时先解析组件传入数据，再结合 `semantic_description`、`prompt`、`data_example` 通过大模型处理，生成符合组件入参的数据。如果 registry 中存在同名后处理函数，则优先走注册函数以保持兼容。
 - `params`: 后处理函数参数映射。
 
 示例：
@@ -93,6 +115,30 @@ output_bytes = generate_report(template_bytes, mapping_json, payload_json)
   "data_source": {
     "name": "project",
     "template": "报告周期：{{ 开始日期 }}至{{ 结束日期 }}"
+  }
+}
+```
+
+大模型后处理示例：
+
+```json
+{
+  "location": "table.top_issues_risks",
+  "semantic_description": "TOP 问题及风险动态表格",
+  "prompt": "从原始项目日志中提取最重要的两个问题或风险，输出 columns/rows 表格数据。",
+  "data_example": {
+    "columns": [
+      {"key": "序号", "label": "序号"},
+      {"key": "问题风险与描述", "label": "问题风险与描述"}
+    ],
+    "rows": [
+      {"序号": "1", "问题风险与描述": "验收排期需确认"}
+    ]
+  },
+  "type": "Table",
+  "data_source": {
+    "name": "raw_project_logs",
+    "needs_post_processing": true
   }
 }
 ```

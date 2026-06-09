@@ -5,9 +5,6 @@
       "location": "text.cover_title",
       "semantic_description": "封面标题",
       "type": "Text",
-      "config": {
-        "preserve_style": true
-      },
       "data_source": {
         "name": "project",
         "template": "{{ 项目名称 }}项目进度报告"
@@ -17,9 +14,6 @@
       "location": "text.cover_period",
       "semantic_description": "封面报告周期",
       "type": "Text",
-      "config": {
-        "preserve_style": true
-      },
       "data_source": {
         "name": "project",
         "template": "报告周期 {{ 报告周期开始 }}至{{ 报告周期结束 }}"
@@ -51,9 +45,6 @@
       "location": "text.overall_progress",
       "semantic_description": "项目整体进展",
       "type": "Text",
-      "config": {
-        "preserve_style": true
-      },
       "data_source": {
         "name": "overall_progress"
       }
@@ -62,9 +53,6 @@
       "location": "text.delivery_plan",
       "semantic_description": "项目交付计划",
       "type": "Text",
-      "config": {
-        "preserve_style": true
-      },
       "data_source": {
         "name": "delivery_plan"
       }
@@ -97,9 +85,6 @@
       "location": "text.current_progress",
       "semantic_description": "当前进展",
       "type": "Text",
-      "config": {
-        "preserve_style": true
-      },
       "data_source": {
         "name": "current_progress"
       }
@@ -108,9 +93,6 @@
       "location": "text.next_plan",
       "semantic_description": "下期计划",
       "type": "Text",
-      "config": {
-        "preserve_style": true
-      },
       "data_source": {
         "name": "next_plan"
       }

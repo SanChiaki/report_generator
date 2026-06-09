@@ -5,9 +5,6 @@
       "location": "text.project_info_title",
       "semantic_description": "项目信息页标题",
       "type": "Text",
-      "config": {
-        "preserve_style": true
-      },
       "data_source": {
         "name": "project_info_title"
       }

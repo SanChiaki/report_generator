@@ -11,10 +11,22 @@ def component(data_source):
         {
             "location": "text.report_title",
             "semantic_description": "报告标题",
+            "prompt": "提炼成一句汇报标题",
+            "data_example": "智慧园区项目周报",
             "type": "Text",
             "data_source": data_source,
         }
     )
+
+
+class FakeComponentProcessor:
+    def __init__(self, result):
+        self.result = result
+        self.calls = []
+
+    def process(self, component, value):
+        self.calls.append((component, value))
+        return self.result
 
 
 def test_resolves_jsonpath_against_named_source():
@@ -83,6 +95,32 @@ def test_calls_named_post_processing_function_with_params():
     )
 
     assert result == "张三, 李四"
+
+
+def test_needs_post_processing_uses_component_processor_with_resolved_data():
+    processor = FakeComponentProcessor("智慧园区项目周报")
+    payload = {"api_data": {"raw": {"项目名称": "智慧园区", "状态": "正常"}}}
+    target = component(
+        {
+            "name": "api_data",
+            "index": "$.raw",
+            "needs_post_processing": True,
+        }
+    )
+
+    result = resolve_component_value(
+        target,
+        payload,
+        PostProcessingRegistry(),
+        processor,
+    )
+
+    assert result == "智慧园区项目周报"
+    called_component, called_value = processor.calls[0]
+    assert called_component.semantic_description == "报告标题"
+    assert called_component.prompt == "提炼成一句汇报标题"
+    assert called_component.data_example == "智慧园区项目周报"
+    assert called_value == {"项目名称": "智慧园区", "状态": "正常"}
 
 
 def test_missing_source_raises_structured_error():

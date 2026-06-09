@@ -1,0 +1,233 @@
+{
+  "template_id": "general-report-post-processing-v1",
+  "component_list": [
+    {
+      "location": "text.cover_title",
+      "semantic_description": "封面标题",
+      "prompt": "根据原始项目材料生成封面标题，必须不超过18个汉字，格式为：项目名称 + 项目进度报告。",
+      "data_example": "智能制造中台项目进度报告",
+      "type": "Text",
+      "data_source": {
+        "name": "raw_project_material",
+        "needs_post_processing": true
+      }
+    },
+    {
+      "location": "text.cover_period",
+      "semantic_description": "封面报告周期",
+      "prompt": "根据原始项目材料生成报告周期文本，必须不超过26个汉字，格式为：报告周期 YYYY-MM-DD至YYYY-MM-DD。",
+      "data_example": "报告周期 2025-12-14至2025-12-25",
+      "type": "Text",
+      "data_source": {
+        "name": "raw_project_material",
+        "needs_post_processing": true
+      }
+    },
+    {
+      "location": "table.project_info",
+      "semantic_description": "项目信息键值表单",
+      "prompt": "从原始项目材料中抽取项目信息，输出对象。键名必须完全匹配示例，不要新增键。",
+      "data_example": {
+        "项目名称": "智能制造中台项目",
+        "项目编码": "PRJ-2025-1225",
+        "客户名称": "星河科技集团",
+        "项目PD": "张明",
+        "计划开始时间": "2025-12-14",
+        "计划结束日期": "2026-03-31",
+        "报告日期": "2025-12-25"
+      },
+      "type": "Table",
+      "config": {
+        "mode": "placeholders"
+      },
+      "data_source": {
+        "name": "raw_project_material",
+        "needs_post_processing": true
+      }
+    },
+    {
+      "location": "table.project_dashboard",
+      "semantic_description": "项目仪表盘键值表单",
+      "prompt": "从原始项目材料中归纳项目仪表盘状态，输出对象。键名必须完全匹配示例，不要新增键。",
+      "data_example": {
+        "项目状态": "正常推进",
+        "进度状态": "按计划",
+        "技术状态": "方案稳定",
+        "项目进度": "82%",
+        "资源状态": "资源充足",
+        "经营状态": "成本可控"
+      },
+      "type": "Table",
+      "config": {
+        "mode": "placeholders"
+      },
+      "data_source": {
+        "name": "raw_project_material",
+        "needs_post_processing": true
+      }
+    },
+    {
+      "location": "text.overall_progress",
+      "semantic_description": "项目整体进展",
+      "prompt": "根据原始项目材料生成一句项目整体进展摘要，不超过24个汉字，不换行。",
+      "data_example": "核心联调完成，整体按计划推进。",
+      "type": "Text",
+      "data_source": {
+        "name": "raw_project_material",
+        "needs_post_processing": true
+      }
+    },
+    {
+      "location": "text.delivery_plan",
+      "semantic_description": "项目交付计划",
+      "prompt": "根据原始项目材料生成一句交付计划摘要，不超过24个汉字，不换行。",
+      "data_example": "下期完成验收测试并准备上线。",
+      "type": "Text",
+      "data_source": {
+        "name": "raw_project_material",
+        "needs_post_processing": true
+      }
+    },
+    {
+      "location": "table.task_details",
+      "semantic_description": "任务详情动态表格",
+      "prompt": "从原始项目材料中整理任务详情，输出 columns/rows 表格数据。列必须为阶段名称、任务名称、产品线、任务状态、计划完成时间、实际完成时间、责任人。输出5条任务，内容要简短。",
+      "data_example": {
+        "columns": [
+          {
+            "key": "阶段名称",
+            "label": "阶段名称"
+          },
+          {
+            "key": "任务名称",
+            "label": "任务名称"
+          },
+          {
+            "key": "产品线",
+            "label": "产品线"
+          },
+          {
+            "key": "任务状态",
+            "label": "任务状态"
+          },
+          {
+            "key": "计划完成时间",
+            "label": "计划完成时间"
+          },
+          {
+            "key": "实际完成时间",
+            "label": "实际完成时间"
+          },
+          {
+            "key": "责任人",
+            "label": "责任人"
+          }
+        ],
+        "rows": [
+          {
+            "阶段名称": "准备",
+            "任务名称": "项目启动",
+            "产品线": "平台",
+            "任务状态": "完成",
+            "计划完成时间": "12-15",
+            "实际完成时间": "12-15",
+            "责任人": "张明"
+          }
+        ]
+      },
+      "type": "Table",
+      "config": {
+        "max_rows": 8,
+        "max_columns": 7
+      },
+      "data_source": {
+        "name": "raw_project_material",
+        "needs_post_processing": true
+      }
+    },
+    {
+      "location": "table.top_issues_risks",
+      "semantic_description": "TOP 问题及风险动态表格",
+      "prompt": "从原始项目材料中提取最高优先级问题和风险，输出 columns/rows 表格数据。列必须为序号、问题风险与描述、解决措施与进展、问题分类、紧急程度、问题状态、要求解决日期、责任人。输出3条。问题风险与描述、解决措施与进展每个值最多6个汉字，其余文本字段最多4个汉字。",
+      "data_example": {
+        "columns": [
+          {
+            "key": "序号",
+            "label": "序号"
+          },
+          {
+            "key": "问题风险与描述",
+            "label": "问题风险与描述"
+          },
+          {
+            "key": "解决措施与进展",
+            "label": "解决措施与进展"
+          },
+          {
+            "key": "问题分类",
+            "label": "问题分类"
+          },
+          {
+            "key": "紧急程度",
+            "label": "紧急程度"
+          },
+          {
+            "key": "问题状态",
+            "label": "问题状态"
+          },
+          {
+            "key": "要求解决日期",
+            "label": "要求解决日期"
+          },
+          {
+            "key": "责任人",
+            "label": "责任人"
+          }
+        ],
+        "rows": [
+          {
+            "序号": "1",
+            "问题风险与描述": "验收待定",
+            "解决措施与进展": "锁定窗口",
+            "问题分类": "风险",
+            "紧急程度": "中",
+            "问题状态": "跟踪中",
+            "要求解决日期": "12-23",
+            "责任人": "张明"
+          }
+        ]
+      },
+      "type": "Table",
+      "config": {
+        "max_rows": 6,
+        "max_columns": 8
+      },
+      "data_source": {
+        "name": "raw_project_material",
+        "needs_post_processing": true
+      }
+    },
+    {
+      "location": "text.current_progress",
+      "semantic_description": "当前进展",
+      "prompt": "根据原始项目材料生成一句当前进展摘要，不超过24个汉字，不换行。",
+      "data_example": "环境联调完成，验收测试推进中。",
+      "type": "Text",
+      "data_source": {
+        "name": "raw_project_material",
+        "needs_post_processing": true
+      }
+    },
+    {
+      "location": "text.next_plan",
+      "semantic_description": "下期计划",
+      "prompt": "根据原始项目材料生成一句下期计划摘要，不超过24个汉字，不换行。",
+      "data_example": "完成验收闭环并提交上线包。",
+      "type": "Text",
+      "data_source": {
+        "name": "raw_project_material",
+        "needs_post_processing": true
+      }
+    }
+  ]
+}

@@ -2,6 +2,7 @@ __pycache__/
 *.py[cod]
 .pytest_cache/
 .venv/
+.env
 uv.lock
 examples/sample_template.pptx
 examples/output_report.pptx

@@ -9,6 +9,7 @@ from jsonpath_ng.exceptions import JSONPathError
 from jsonpath_ng import parse
 
 from report_generator.errors import ErrorCode, ReportGenerationError
+from report_generator.llm import ComponentDataProcessor
 from report_generator.models import ComponentMapping, DataSource
 from report_generator.post_processing import PostProcessingRegistry
 
@@ -17,13 +18,14 @@ def resolve_component_value(
     component: ComponentMapping,
     payload: dict[str, Any],
     registry: PostProcessingRegistry,
+    processor: ComponentDataProcessor | None = None,
 ) -> Any:
     source = component.data_source
     if source is None:
         return None
 
     if source.needs_post_processing:
-        return _resolve_post_processed(component, source, payload, registry)
+        return _resolve_post_processed(component, source, payload, registry, processor)
 
     if source.template:
         base = _source_base(component, source, payload)
@@ -106,13 +108,25 @@ def _resolve_post_processed(
     source: DataSource,
     payload: dict[str, Any],
     registry: PostProcessingRegistry,
+    processor: ComponentDataProcessor | None,
 ) -> Any:
-    if not source.name or not registry.has(source.name):
+    if source.name and registry.has(source.name):
+        return _resolve_registered_post_processor(component, source, payload, registry)
+    if processor is None:
         raise ReportGenerationError(
             ErrorCode.POST_PROCESSING_FAILED,
-            f"组件 {component.location} 引用了未注册的后处理函数 {source.name}",
+            f"组件 {component.location} 需要大模型后处理，但未配置组件数据处理器",
             component,
         )
+    return processor.process(component, _resolve_pre_processed_value(component, source, payload))
+
+
+def _resolve_registered_post_processor(
+    component: ComponentMapping,
+    source: DataSource,
+    payload: dict[str, Any],
+    registry: PostProcessingRegistry,
+) -> Any:
     params: dict[str, Any] = {}
     for param_name, payload_key in source.params.items():
         if payload_key not in payload:
@@ -123,10 +137,28 @@ def _resolve_post_processed(
             )
         params[param_name] = payload[payload_key]
     try:
-        return registry.call(source.name, **params)
+        return registry.call(str(source.name), **params)
     except Exception as exc:
         raise ReportGenerationError(
             ErrorCode.POST_PROCESSING_FAILED,
             f"组件 {component.location} 的后处理失败: {exc}",
             component,
         ) from exc
+
+
+def _resolve_pre_processed_value(component: ComponentMapping, source: DataSource, payload: dict[str, Any]) -> Any:
+    if source.template:
+        base = _source_base(component, source, payload)
+        return _render_template(component, source.template, base)
+    if source.index:
+        base = _source_base(component, source, payload)
+        return _resolve_jsonpath(component, source.index, base)
+    if source.name:
+        if source.name not in payload:
+            raise ReportGenerationError(
+                ErrorCode.DATA_SOURCE_NOT_FOUND,
+                f"组件 {component.location} 引用了不存在的数据源 {source.name}",
+                component,
+            )
+        return payload[source.name]
+    return payload

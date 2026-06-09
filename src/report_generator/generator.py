@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import os
+from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
 from report_generator.components.chart import apply_chart
@@ -9,6 +11,7 @@ from report_generator.components.table import apply_table
 from report_generator.components.text import apply_text
 from report_generator.datasource import resolve_component_value
 from report_generator.errors import ErrorCode, ReportGenerationError
+from report_generator.llm import ComponentDataProcessor, OpenAICompletionProcessor
 from report_generator.models import ComponentMapping, ReportMapping
 from report_generator.post_processing import PostProcessingRegistry
 from report_generator.pptx.document import PptxDocument, ShapeRef
@@ -19,24 +22,81 @@ def generate_report(
     mapping_payload: dict[str, Any],
     business_payload: dict[str, Any],
     registry: PostProcessingRegistry | None = None,
+    processor: ComponentDataProcessor | None = None,
+    llm_concurrency: int | None = None,
 ) -> bytes:
     registry = registry or PostProcessingRegistry()
+    processor = processor or OpenAICompletionProcessor()
+    llm_concurrency = _resolve_llm_concurrency(llm_concurrency)
     mapping = ReportMapping.model_validate(mapping_payload)
     doc = PptxDocument.open(template_bytes)
     required_names = {component.location for component in mapping.component_list}
     index = doc.shape_index(required_names=required_names)
-
     for component in mapping.component_list:
+        _find_component(component, index)
+    values = _resolve_component_values(mapping.component_list, business_payload, registry, processor, llm_concurrency)
+
+    for component, value in zip(mapping.component_list, values, strict=True):
         ref = _find_component(component, index)
         if component.visible is False:
             doc.remove_shape(ref.shape)
             index = doc.shape_index(required_names=required_names)
             continue
-        value = resolve_component_value(component, business_payload, registry)
         _apply_component(doc, ref, component, value)
         index = doc.shape_index(required_names=required_names)
 
     return doc.to_bytes()
+
+
+def _resolve_component_values(
+    components: list[ComponentMapping],
+    business_payload: dict[str, Any],
+    registry: PostProcessingRegistry,
+    processor: ComponentDataProcessor,
+    llm_concurrency: int,
+) -> list[Any]:
+    values: list[Any] = [None] * len(components)
+    post_processing_indexes = [
+        index
+        for index, component in enumerate(components)
+        if component.visible is not False
+        and component.data_source is not None
+        and component.data_source.needs_post_processing
+    ]
+
+    for index, component in enumerate(components):
+        if index in post_processing_indexes or component.visible is False:
+            continue
+        values[index] = resolve_component_value(component, business_payload, registry, processor)
+
+    if not post_processing_indexes:
+        return values
+
+    with ThreadPoolExecutor(max_workers=llm_concurrency) as executor:
+        futures = {
+            executor.submit(
+                resolve_component_value,
+                components[index],
+                business_payload,
+                registry,
+                processor,
+            ): index
+            for index in post_processing_indexes
+        }
+        for future, index in futures.items():
+            values[index] = future.result()
+
+    return values
+
+
+def _resolve_llm_concurrency(value: int | None) -> int:
+    if value is None:
+        raw = os.getenv("LLM_CONCURRENCY", "4")
+        try:
+            value = int(raw)
+        except ValueError:
+            value = 4
+    return max(1, value)
 
 
 def _find_component(component: ComponentMapping, index: dict[str, ShapeRef]) -> ShapeRef:
