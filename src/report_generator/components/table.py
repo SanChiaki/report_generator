@@ -71,6 +71,18 @@ def apply_table(
     if component.config.get("preserve_style"):
         return _apply_table_preserving_style(shape, component, table_data)
 
+    if table_data.column_count <= len(shape.table.columns):
+        return _apply_table_with_row_append(shape, component, table_data)
+
+    return _rebuild_table(doc, shape, component, table_data)
+
+
+def _rebuild_table(
+    doc: PptxDocument,
+    shape: Any,
+    component: ComponentMapping,
+    table_data: NormalizedTable,
+) -> Any:
     row_count = table_data.row_count
     column_count = table_data.column_count
     if row_count == 0 or column_count == 0:
@@ -95,6 +107,50 @@ def apply_table(
         _apply_font_size(table, int(component.config["font_size"]))
 
     return new_shape
+
+
+def _apply_table_with_row_append(
+    shape: Any,
+    component: ComponentMapping,
+    table_data: NormalizedTable,
+) -> Any:
+    table = shape.table
+    row_count = table_data.row_count
+    column_count = table_data.column_count
+    if row_count == 0 or column_count == 0:
+        raise ReportGenerationError(
+            ErrorCode.DATA_SOURCE_INVALID,
+            f"组件 {component.location} 的表格数据为空且无法推断列",
+            component,
+        )
+    if column_count > len(table.columns):
+        raise ReportGenerationError(
+            ErrorCode.TABLE_OVERFLOW,
+            f"组件 {component.location} 的列数 {column_count} 超过模板预留列数 {len(table.columns)}",
+            component,
+        )
+
+    while len(table.rows) < row_count:
+        _append_table_row(table)
+
+    _write_cells(table, table_data)
+    for row_index in range(row_count, len(table.rows)):
+        for col_index in range(len(table.columns)):
+            _replace_cell_text_preserving_style(table.cell(row_index, col_index), "")
+    for row_index in range(row_count):
+        for col_index in range(column_count, len(table.columns)):
+            _replace_cell_text_preserving_style(table.cell(row_index, col_index), "")
+
+    shape.height = sum(table.rows[row_index].height for row_index in range(len(table.rows)))
+    if "font_size" in component.config:
+        _apply_font_size(table, int(component.config["font_size"]))
+
+    return shape
+
+
+def _append_table_row(table: Any) -> None:
+    source_row = table.rows[len(table.rows) - 1]
+    table._tbl.append(deepcopy(source_row._tr))
 
 
 def _copy_table_style(source_table: Any, target_table: Any, width: int, height: int) -> None:

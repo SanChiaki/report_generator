@@ -1,0 +1,119 @@
+{
+  "template_id": "general-report-v1",
+  "component_list": [
+    {
+      "location": "text.cover_title",
+      "semantic_description": "封面标题",
+      "type": "Text",
+      "config": {
+        "preserve_style": true
+      },
+      "data_source": {
+        "name": "project",
+        "template": "{{ 项目名称 }}项目进度报告"
+      }
+    },
+    {
+      "location": "text.cover_period",
+      "semantic_description": "封面报告周期",
+      "type": "Text",
+      "config": {
+        "preserve_style": true
+      },
+      "data_source": {
+        "name": "project",
+        "template": "报告周期 {{ 报告周期开始 }}至{{ 报告周期结束 }}"
+      }
+    },
+    {
+      "location": "table.project_info",
+      "semantic_description": "项目信息键值表单",
+      "type": "Table",
+      "config": {
+        "mode": "placeholders"
+      },
+      "data_source": {
+        "name": "project_info"
+      }
+    },
+    {
+      "location": "table.project_dashboard",
+      "semantic_description": "项目仪表盘键值表单",
+      "type": "Table",
+      "config": {
+        "mode": "placeholders"
+      },
+      "data_source": {
+        "name": "dashboard"
+      }
+    },
+    {
+      "location": "text.overall_progress",
+      "semantic_description": "项目整体进展",
+      "type": "Text",
+      "config": {
+        "preserve_style": true
+      },
+      "data_source": {
+        "name": "overall_progress"
+      }
+    },
+    {
+      "location": "text.delivery_plan",
+      "semantic_description": "项目交付计划",
+      "type": "Text",
+      "config": {
+        "preserve_style": true
+      },
+      "data_source": {
+        "name": "delivery_plan"
+      }
+    },
+    {
+      "location": "table.task_details",
+      "semantic_description": "任务详情动态表格",
+      "type": "Table",
+      "config": {
+        "max_rows": 8,
+        "max_columns": 7
+      },
+      "data_source": {
+        "name": "task_details"
+      }
+    },
+    {
+      "location": "table.top_issues_risks",
+      "semantic_description": "TOP 问题及风险动态表格",
+      "type": "Table",
+      "config": {
+        "max_rows": 6,
+        "max_columns": 8
+      },
+      "data_source": {
+        "name": "top_issues_risks"
+      }
+    },
+    {
+      "location": "text.current_progress",
+      "semantic_description": "当前进展",
+      "type": "Text",
+      "config": {
+        "preserve_style": true
+      },
+      "data_source": {
+        "name": "current_progress"
+      }
+    },
+    {
+      "location": "text.next_plan",
+      "semantic_description": "下期计划",
+      "type": "Text",
+      "config": {
+        "preserve_style": true
+      },
+      "data_source": {
+        "name": "next_plan"
+      }
+    }
+  ]
+}

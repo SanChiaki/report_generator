@@ -72,6 +72,38 @@ def test_apply_table_defaults_to_dynamic_resize_while_copying_template_styles(si
     assert new_shape.table.cell(2, 1).text == "测试通过率偏低"
 
 
+def test_apply_table_appends_rows_in_place_when_columns_fit(simple_template_bytes):
+    doc = PptxDocument.open(simple_template_bytes)
+    shape = doc.shape_index()["table.top_risks"].shape
+    original_shape_id = shape.shape_id
+    original_height = shape.height
+    template_body_height = shape.table.rows[1].height
+    shape.table.cell(1, 0).fill.solid()
+    shape.table.cell(1, 0).fill.fore_color.rgb = RGBColor(0xAB, 0xCD, 0xEF)
+    shape.table.cell(1, 0).text_frame.paragraphs[0].runs[0].font.bold = True
+    body_fill = shape.table.cell(1, 0).fill.fore_color.rgb
+    body_bold = shape.table.cell(1, 0).text_frame.paragraphs[0].runs[0].font.bold
+    data = [
+        {"风险类型": "延期风险", "风险描述": "设备到货存在延期风险"},
+        {"风险类型": "质量风险", "风险描述": "测试通过率偏低"},
+        {"风险类型": "资源风险", "风险描述": "关键人员排期冲突"},
+    ]
+
+    updated_shape = apply_table(
+        doc,
+        shape,
+        table_component(order=["风险类型", "风险描述"], max_rows=3),
+        data,
+    )
+
+    assert updated_shape.shape_id == original_shape_id
+    assert len(updated_shape.table.rows) == 4
+    assert updated_shape.height == original_height + (2 * template_body_height)
+    assert updated_shape.table.cell(3, 0).text == "资源风险"
+    assert updated_shape.table.cell(3, 0).fill.fore_color.rgb == body_fill
+    assert updated_shape.table.cell(3, 0).text_frame.paragraphs[0].runs[0].font.bold == body_bold
+
+
 def test_apply_table_rejects_too_many_rows(simple_template_bytes):
     doc = PptxDocument.open(simple_template_bytes)
     shape = doc.shape_index()["table.top_risks"].shape
