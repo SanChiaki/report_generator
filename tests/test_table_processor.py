@@ -223,6 +223,47 @@ def test_apply_table_replaces_cell_placeholders_without_rebuilding(simple_templa
     assert updated_shape.table.cell(0, 1).text_frame.paragraphs[0].runs[0].font.bold is True
 
 
+def test_apply_table_applies_column_value_styles(simple_template_bytes):
+    doc = PptxDocument.open(simple_template_bytes)
+    shape = doc.shape_index()["table.top_risks"].shape
+    data = [
+        {"任务名称": "客户验收", "任务状态": "未开始"},
+        {"任务名称": "接口联调", "任务状态": "已完成"},
+        {"任务名称": "现场调测", "任务状态": "进行中"},
+        {"任务名称": "环境整改", "任务状态": "延期"},
+    ]
+
+    updated_shape = apply_table(
+        doc,
+        shape,
+        table_component(
+            order=["任务名称", "任务状态"],
+            column_value_styles={
+                "任务状态": {
+                    "已完成": {"color": "10B981", "bold": True},
+                    "进行中": {"color": "C00000", "bold": True},
+                    "未开始": {"color": "000000", "bold": True},
+                    "延期": {"color": "D99A00", "bold": True},
+                }
+            },
+        ),
+        data,
+    )
+
+    status_cells = [updated_shape.table.cell(index, 1) for index in range(1, 5)]
+    colors = [
+        status_cells[index].text_frame.paragraphs[0].runs[0].font.color.rgb
+        for index in range(4)
+    ]
+    bolds = [
+        status_cells[index].text_frame.paragraphs[0].runs[0].font.bold
+        for index in range(4)
+    ]
+
+    assert [str(color) for color in colors] == ["000000", "10B981", "C00000", "D99A00"]
+    assert bolds == [True, True, True, True]
+
+
 def test_apply_table_preserve_style_rejects_when_template_has_insufficient_rows(simple_template_bytes):
     doc = PptxDocument.open(simple_template_bytes)
     shape = doc.shape_index()["table.top_risks"].shape

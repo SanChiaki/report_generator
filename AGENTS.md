@@ -85,7 +85,7 @@ output_bytes = generate_report(template_bytes, mapping_json, payload_json)
 
 - `location`: PPT 选择窗格里的 shape 名称。
 - `semantic_description`: 组件语义说明，便于理解和生成 mapping。
-- `type`: 组件类型。当前实际支持 `Text`、`Image`、`Table`、`Chart`、`Shape`。`Milestone` 和 `GanttChart` 只是模型中预留的类型，当前生成器未实现，mapping 中不要使用。
+- `type`: 组件类型。当前实际支持 `Text`、`Image`、`Table`、`Chart`、`Shape`、`TopIssues`、`Milestone`。`GanttChart` 只是模型中预留的类型，当前生成器未实现，mapping 中不要使用。
 - `config`: 组件配置。默认应少配样式，保留模板原样式。
 - `data_source`: 数据来源描述。
 - `visible`: 为 `false` 时删除组件。
@@ -302,6 +302,84 @@ payload：
 
 只有配置了 `fill`、`line` 或 `state_styles` 时才改样式。
 
+### TopIssues
+
+用途：生成“TOP 问题与风险”动态卡片列表。
+
+模板：在 PPT 中放一个普通 shape 作为锚点，命名为例如 `top_issues.cards`。生成时会删除该锚点，并从锚点的 `left/top/width/height` 开始垂直绘制卡片。卡片数量按数据动态生成；超出页面空间时继续向下排布，不自动分页。
+
+数据可以是数组，也可以是包含 `items` 的对象：
+
+```json
+[
+  {
+    "severity": "紧急",
+    "created_at": "2026-06-06 10:30",
+    "description": "客户验收窗口尚未最终确认，可能影响验收排期。",
+    "action": "已协调客户项目经理锁定评审窗口。",
+    "owner": "张明",
+    "status": "跟踪中",
+    "due_date": "2026-06-14"
+  }
+]
+```
+
+内置三种严重等级样式：`紧急`、`重要`、`一般`。可通过 `config.styles` 覆盖颜色：
+
+```json
+{
+  "location": "top_issues.cards",
+  "type": "TopIssues",
+  "config": {
+    "card_height": 0.66,
+    "card_gap": 0.1,
+    "styles": {
+      "紧急": {"accent": "D64545"},
+      "重要": {"accent": "FF8A00"},
+      "一般": {"accent": "F5C400"}
+    }
+  },
+  "data_source": {"name": "top_issues"}
+}
+```
+
+可配置 `description_template`、`action_template`、`meta_template` 自定义卡片文本。模板上下文就是单条 issue 对象。
+
+### Milestone
+
+用途：生成动态里程碑时间轴，节点数量按数据动态增减。
+
+模板：在 PPT 中放一个普通 shape 作为锚点，命名为例如 `milestone.delivery`。生成时会删除该锚点，并在锚点区域内等距绘制连线、节点、日期和阶段名称。
+
+数据可以是数组，也可以是包含 `items` 的对象：
+
+```json
+{
+  "items": [
+    {"label": "准备", "date": "04-20", "status": "done"},
+    {"label": "安装", "date": "05-18", "status": "done"},
+    {"label": "调测", "date": "06-20", "status": "active"},
+    {"label": "验收", "date": "07-05", "status": "pending"}
+  ]
+}
+```
+
+内置状态样式：`done`、`active`、`pending`。可通过 `config.status_styles` 覆盖节点填充、线条和文字颜色：
+
+```json
+{
+  "location": "milestone.delivery",
+  "type": "Milestone",
+  "config": {
+    "node_size": 0.14,
+    "status_styles": {
+      "risk": {"fill": "FFF5D6", "line": "D99A00", "text": "333333"}
+    }
+  },
+  "data_source": {"name": "milestones"}
+}
+```
+
 ## 如何构造模板
 
 ### 通用规则
@@ -370,6 +448,28 @@ payload：
 4. payload 提供图片路径、URL 或 data URL。
 
 注意：图片组件会删除原 shape 并插入新图片；若需要固定边框或背景，请把边框/背景做成单独 shape，不要依赖图片占位 shape 自身样式。
+
+### TOP 问题与风险模板
+
+适合问题/风险卡片数量变化的页面：
+
+1. 在需要开始绘制卡片的位置放一个透明普通 shape。
+2. 将该 shape 命名为 `top_issues.cards`。
+3. mapping 使用 `TopIssues`。
+4. payload 传入 issue 数组。
+
+`TopIssues` 当前是程序生成卡片，不复制模板中的复杂组合卡片；如需完全复刻 PPT 手工设计的卡片内部布局，需要后续扩展模板组复制模式。
+
+### 里程碑模板
+
+适合交付计划、项目阶段、关键节点：
+
+1. 在时间轴区域放一个透明普通 shape。
+2. 将该 shape 命名为 `milestone.delivery`。
+3. mapping 使用 `Milestone`。
+4. payload 传入里程碑数组。
+
+`Milestone` 当前按锚点宽度等距分布节点，不按真实日期比例定位。
 
 ## 示例文件
 

@@ -11,6 +11,7 @@ ComponentType = Literal[
     "Table",
     "Chart",
     "Shape",
+    "TopIssues",
     "Milestone",
     "GanttChart",
 ]

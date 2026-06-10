@@ -6,9 +6,11 @@ from typing import Any
 
 from report_generator.components.chart import apply_chart
 from report_generator.components.image import apply_image
+from report_generator.components.milestone import apply_milestone
 from report_generator.components.shape import apply_shape
 from report_generator.components.table import apply_table
 from report_generator.components.text import apply_text
+from report_generator.components.top_issues import apply_top_issues
 from report_generator.datasource import resolve_component_value
 from report_generator.errors import ErrorCode, ReportGenerationError
 from report_generator.llm import ComponentDataProcessor, OpenAICompletionProcessor
@@ -130,6 +132,12 @@ def _apply_component(
         return
     if component.type == "Shape":
         apply_shape(ref.shape, component, value)
+        return
+    if component.type == "TopIssues":
+        apply_top_issues(doc, ref.shape, component, value)
+        return
+    if component.type == "Milestone":
+        apply_milestone(doc, ref.shape, component, value)
         return
     raise ReportGenerationError(
         ErrorCode.TYPE_MISMATCH,

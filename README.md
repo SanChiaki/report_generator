@@ -8,6 +8,12 @@ HTTP service for generating PPTX reports from:
 
 The PPT mapping keeps `template_id` and `component_list`. In PPT mappings, `location` is the PowerPoint selection pane shape name.
 
+Supported component types include `Text`, `Image`, `Table`, `Chart`, `Shape`, `TopIssues`, and `Milestone`.
+
+`TopIssues` draws a dynamic vertical TOP issues/risks card list from a placeholder anchor shape. It supports built-in severity styles for `紧急`, `重要`, and `一般`.
+
+`Milestone` draws a dynamic milestone timeline from a placeholder anchor shape. Nodes are generated from `items` and distributed evenly across the anchor width.
+
 ## Development
 
 ```bash

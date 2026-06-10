@@ -1,0 +1,468 @@
+{
+  "template_id": "italy-progress-template1-v1",
+  "component_list": [
+    {
+      "location": "text.cover_title",
+      "semantic_description": "封面报告标题",
+      "type": "Text",
+      "config": {
+        "preserve_style": true
+      },
+      "data_source": {
+        "name": "project",
+        "template": "{{ project_name }}进度报告"
+      }
+    },
+    {
+      "location": "text.cover_period",
+      "semantic_description": "封面报告周期",
+      "type": "Text",
+      "config": {
+        "preserve_style": true
+      },
+      "data_source": {
+        "name": "project",
+        "template": "报告周期：{{ period_start }} – {{ period_end }}"
+      }
+    },
+    {
+      "location": "text.project_overview_summary",
+      "semantic_description": "项目信息页项目概述",
+      "type": "Text",
+      "config": {
+        "preserve_style": true
+      },
+      "data_source": {
+        "name": "project",
+        "index": "$.overview"
+      }
+    },
+    {
+      "location": "text.project_name",
+      "semantic_description": "项目名称",
+      "type": "Text",
+      "config": {
+        "preserve_style": true
+      },
+      "data_source": {
+        "name": "project",
+        "index": "$.project_name"
+      }
+    },
+    {
+      "location": "text.project_code",
+      "semantic_description": "项目编码",
+      "type": "Text",
+      "config": {
+        "preserve_style": true
+      },
+      "data_source": {
+        "name": "project",
+        "index": "$.project_code"
+      }
+    },
+    {
+      "location": "text.customer_name",
+      "semantic_description": "客户名称",
+      "type": "Text",
+      "config": {
+        "preserve_style": true
+      },
+      "data_source": {
+        "name": "project",
+        "index": "$.customer_name"
+      }
+    },
+    {
+      "location": "text.project_manager",
+      "semantic_description": "项目经理或项目PD",
+      "type": "Text",
+      "config": {
+        "preserve_style": true
+      },
+      "data_source": {
+        "name": "project",
+        "index": "$.project_manager"
+      }
+    },
+    {
+      "location": "text.planned_start_date",
+      "semantic_description": "计划开始时间",
+      "type": "Text",
+      "config": {
+        "preserve_style": true
+      },
+      "data_source": {
+        "name": "project",
+        "index": "$.planned_start_date"
+      }
+    },
+    {
+      "location": "text.planned_end_date",
+      "semantic_description": "计划结束时间",
+      "type": "Text",
+      "config": {
+        "preserve_style": true
+      },
+      "data_source": {
+        "name": "project",
+        "index": "$.planned_end_date"
+      }
+    },
+    {
+      "location": "text.report_date",
+      "semantic_description": "报告日期",
+      "type": "Text",
+      "config": {
+        "preserve_style": true
+      },
+      "data_source": {
+        "name": "project",
+        "index": "$.report_date"
+      }
+    },
+    {
+      "location": "text.project_status_value",
+      "semantic_description": "项目状态",
+      "type": "Text",
+      "config": {
+        "preserve_style": true
+      },
+      "data_source": {
+        "name": "dashboard",
+        "index": "$.project_status"
+      }
+    },
+    {
+      "location": "text.progress_status_value",
+      "semantic_description": "进度状态",
+      "type": "Text",
+      "config": {
+        "preserve_style": true
+      },
+      "data_source": {
+        "name": "dashboard",
+        "index": "$.progress_status"
+      }
+    },
+    {
+      "location": "text.project_progress_value",
+      "semantic_description": "项目累计进度",
+      "type": "Text",
+      "config": {
+        "preserve_style": true
+      },
+      "data_source": {
+        "name": "dashboard",
+        "template": "累积完成 {{ project_progress }}"
+      }
+    },
+    {
+      "location": "text.technical_status_value",
+      "semantic_description": "技术状态",
+      "type": "Text",
+      "config": {
+        "preserve_style": true
+      },
+      "data_source": {
+        "name": "dashboard",
+        "template": "技术满足度{{ technical_satisfaction }}"
+      }
+    },
+    {
+      "location": "text.resource_status_value",
+      "semantic_description": "资源状态",
+      "type": "Text",
+      "config": {
+        "preserve_style": true
+      },
+      "data_source": {
+        "name": "dashboard",
+        "template": "资源到位{{ resource_availability }}"
+      }
+    },
+    {
+      "location": "text.business_status_value",
+      "semantic_description": "经营状态",
+      "type": "Text",
+      "config": {
+        "preserve_style": true
+      },
+      "data_source": {
+        "name": "dashboard",
+        "template": "预算使用率 {{ budget_usage }}"
+      }
+    },
+    {
+      "location": "shape.progress_status_badge",
+      "semantic_description": "进度状态徽标",
+      "type": "Shape",
+      "config": {
+        "state_styles": {
+          "状态正常": {
+            "fill": "E7F6EF",
+            "line": "1EAA73"
+          },
+          "需要关注": {
+            "fill": "FFF5D6",
+            "line": "D99A00"
+          },
+          "存在风险": {
+            "fill": "FDE2E2",
+            "line": "D64545"
+          }
+        }
+      },
+      "data_source": {
+        "name": "dashboard",
+        "index": "$.progress_badge"
+      }
+    },
+    {
+      "location": "shape.technical_status_badge",
+      "semantic_description": "技术状态徽标",
+      "type": "Shape",
+      "config": {
+        "state_styles": {
+          "状态正常": {
+            "fill": "E7F6EF",
+            "line": "1EAA73"
+          },
+          "需要关注": {
+            "fill": "FFF5D6",
+            "line": "D99A00"
+          },
+          "存在风险": {
+            "fill": "FDE2E2",
+            "line": "D64545"
+          }
+        }
+      },
+      "data_source": {
+        "name": "dashboard",
+        "index": "$.technical_badge"
+      }
+    },
+    {
+      "location": "shape.resource_status_badge",
+      "semantic_description": "资源状态徽标",
+      "type": "Shape",
+      "config": {
+        "state_styles": {
+          "状态正常": {
+            "fill": "E7F6EF",
+            "line": "1EAA73"
+          },
+          "需要关注": {
+            "fill": "FFF5D6",
+            "line": "D99A00"
+          },
+          "存在风险": {
+            "fill": "FDE2E2",
+            "line": "D64545"
+          }
+        }
+      },
+      "data_source": {
+        "name": "dashboard",
+        "index": "$.resource_badge"
+      }
+    },
+    {
+      "location": "text.overall_progress_summary",
+      "semantic_description": "项目整体概况",
+      "type": "Text",
+      "config": {
+        "preserve_style": true
+      },
+      "data_source": {
+        "name": "overall_progress",
+        "index": "$.summary"
+      }
+    },
+    {
+      "location": "text.key_conclusion",
+      "semantic_description": "关键结论",
+      "type": "Text",
+      "config": {
+        "preserve_style": true
+      },
+      "data_source": {
+        "name": "overall_progress",
+        "template": "关键结论：{{ conclusion }}"
+      }
+    },
+    {
+      "location": "text.key_progress",
+      "semantic_description": "本期关键进展",
+      "type": "Text",
+      "config": {
+        "preserve_style": true
+      },
+      "data_source": {
+        "name": "overall_progress",
+        "index": "$.key_progress"
+      }
+    },
+    {
+      "location": "text.risk_issue_summary",
+      "semantic_description": "风险及问题管理摘要",
+      "type": "Text",
+      "config": {
+        "preserve_style": true
+      },
+      "data_source": {
+        "name": "overall_progress",
+        "template": "本期成功关闭 {{ closed_issues }} 个问题或风险，现有 {{ open_issues }} 个问题或风险在处理中。"
+      }
+    },
+    {
+      "location": "table.delivery_plan",
+      "semantic_description": "项目交付计划任务表",
+      "type": "Table",
+      "config": {
+        "max_rows": 12,
+        "max_columns": 7,
+        "order": [
+          "阶段名称",
+          "任务名称",
+          "产品线",
+          "任务状态",
+          "计划完成时间",
+          "实际完成时间",
+          "责任人"
+        ],
+        "column_value_styles": {
+          "任务状态": {
+            "已完成": {
+              "color": "10B981",
+              "bold": true
+            },
+            "进行中": {
+              "color": "C00000",
+              "bold": true
+            },
+            "未开始": {
+              "color": "000000",
+              "bold": true
+            },
+            "延期": {
+              "color": "D99A00",
+              "bold": true
+            },
+            "暂停": {
+              "color": "666666",
+              "bold": true
+            },
+            "取消": {
+              "color": "999999",
+              "bold": true
+            }
+          }
+        }
+      },
+      "data_source": {
+        "name": "delivery_plan"
+      }
+    },
+    {
+      "location": "milestone.delivery",
+      "semantic_description": "项目交付里程碑动态时间轴",
+      "type": "Milestone",
+      "config": {
+        "node_size": 0.22,
+        "date_height": 0.24,
+        "label_height": 0.36,
+        "date_font_size": 12,
+        "label_font_size": 14,
+        "line_color": "44546A",
+        "status_styles": {
+          "done": {
+            "fill": "0052CC",
+            "line": "0052CC",
+            "text": "333333"
+          },
+          "active": {
+            "fill": "FFFFFF",
+            "line": "0052CC",
+            "text": "666666"
+          },
+          "pending": {
+            "fill": "FFFFFF",
+            "line": "0052CC",
+            "text": "666666"
+          },
+          "risk": {
+            "fill": "FFF5D6",
+            "line": "D99A00",
+            "text": "333333"
+          }
+        },
+        "preserve_anchor": true,
+        "label_bold": true,
+        "line_y_ratio": 0.5,
+        "line_width": 1.5,
+        "horizontal_padding": 0.45,
+        "date_color": "C00000"
+      },
+      "data_source": {
+        "name": "milestones"
+      }
+    },
+    {
+      "location": "top_issues.cards",
+      "semantic_description": "TOP问题与风险动态卡片列表",
+      "type": "TopIssues",
+      "config": {
+        "card_gap": 0.12,
+        "strip_width": 0.08,
+        "severity_width": 0.7,
+        "styles": {
+          "紧急": {
+            "accent": "D64545"
+          },
+          "重要": {
+            "accent": "FF8A00"
+          },
+          "一般": {
+            "accent": "F5C400"
+          }
+        },
+        "severity_font_size": 18,
+        "description_font_size": 13,
+        "action_font_size": 13,
+        "meta_font_size": 12,
+        "description_color": "0052CC",
+        "action_color": "0052CC",
+        "meta_color": "333333"
+      },
+      "data_source": {
+        "name": "top_issues"
+      }
+    },
+    {
+      "location": "text.next_plan_item_1",
+      "semantic_description": "下期计划第一条",
+      "type": "Text",
+      "config": {
+        "preserve_style": true
+      },
+      "data_source": {
+        "name": "next_plan",
+        "template": "1. {{ items[0] }}"
+      }
+    },
+    {
+      "location": "text.next_plan_item_2",
+      "semantic_description": "下期计划第二条",
+      "type": "Text",
+      "config": {
+        "preserve_style": true
+      },
+      "data_source": {
+        "name": "next_plan",
+        "template": "2. {{ items[1] }}"
+      }
+    }
+  ]
+}

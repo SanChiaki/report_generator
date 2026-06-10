@@ -8,6 +8,7 @@ from typing import Any
 from jinja2 import StrictUndefined
 from jinja2.exceptions import TemplateError, TemplateSyntaxError, UndefinedError
 from jinja2.sandbox import SandboxedEnvironment
+from pptx.dml.color import RGBColor
 from pptx.util import Pt
 
 from report_generator.errors import ErrorCode, ReportGenerationError
@@ -69,12 +70,18 @@ def apply_table(
         )
 
     if component.config.get("preserve_style"):
-        return _apply_table_preserving_style(shape, component, table_data)
+        updated_shape = _apply_table_preserving_style(shape, component, table_data)
+        _apply_column_value_styles(updated_shape.table, component, table_data)
+        return updated_shape
 
     if table_data.column_count <= len(shape.table.columns):
-        return _apply_table_with_row_append(shape, component, table_data)
+        updated_shape = _apply_table_with_row_append(shape, component, table_data)
+        _apply_column_value_styles(updated_shape.table, component, table_data)
+        return updated_shape
 
-    return _rebuild_table(doc, shape, component, table_data)
+    updated_shape = _rebuild_table(doc, shape, component, table_data)
+    _apply_column_value_styles(updated_shape.table, component, table_data)
+    return updated_shape
 
 
 def _rebuild_table(
@@ -426,6 +433,40 @@ def _apply_font_size(table: Any, font_size: int) -> None:
                     run.font.size = Pt(font_size)
 
 
+def _apply_column_value_styles(table: Any, component: ComponentMapping, table_data: NormalizedTable) -> None:
+    styles = component.config.get("column_value_styles")
+    if not isinstance(styles, Mapping) or not styles:
+        return
+    if table_data.kind != "records" or not table_data.cells:
+        return
+
+    headers = [str(value) for value in table_data.cells[0]]
+    for column_name, value_styles in styles.items():
+        if not isinstance(value_styles, Mapping):
+            continue
+        try:
+            col_index = headers.index(str(column_name))
+        except ValueError:
+            continue
+        for row_index in range(1, table_data.row_count):
+            raw_value = table_data.value_at(row_index, col_index)
+            style = value_styles.get(str(raw_value))
+            if not isinstance(style, Mapping):
+                continue
+            _apply_cell_font_style(table.cell(row_index, col_index), style)
+
+
+def _apply_cell_font_style(cell: Any, style: Mapping[str, Any]) -> None:
+    for paragraph in cell.text_frame.paragraphs:
+        for run in paragraph.runs:
+            if "color" in style:
+                run.font.color.rgb = _rgb(str(style["color"]))
+            if "bold" in style:
+                run.font.bold = bool(style["bold"])
+            if "font_size" in style:
+                run.font.size = Pt(int(style["font_size"]))
+
+
 def _replace_cell_text_preserving_style(
     cell: Any,
     value: Any,
@@ -483,3 +524,14 @@ def _copy_run_style(source_run: Any | None, target_run: Any) -> None:
     if target_r_pr is not None:
         target_r.remove(target_r_pr)
     target_r.insert(0, deepcopy(source_r_pr))
+
+
+def _rgb(value: str) -> RGBColor:
+    normalized = value.lstrip("#")
+    if len(normalized) != 6 or any(char not in "0123456789abcdefABCDEF" for char in normalized):
+        raise ValueError(f"invalid RGB color {value!r}")
+    return RGBColor(
+        int(normalized[0:2], 16),
+        int(normalized[2:4], 16),
+        int(normalized[4:6], 16),
+    )
