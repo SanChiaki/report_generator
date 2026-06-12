@@ -142,6 +142,55 @@ def test_milestone_treats_numeric_dimensions_as_inches():
     assert index["milestone.delivery.item_1.label"].shape.height == Inches(0.3)
 
 
+def test_milestone_draws_nodes_without_outline_by_default():
+    mapping = {
+        "template_id": "milestone-test",
+        "component_list": [
+            {
+                "location": "milestone.delivery",
+                "semantic_description": "项目里程碑",
+                "type": "Milestone",
+                "data_source": {"name": "milestones"},
+            }
+        ],
+    }
+    payload = {"milestones": [{"label": "上线", "date": "07-20", "status": "done"}]}
+
+    output = generate_report(_template_bytes(), mapping, payload, PostProcessingRegistry())
+    doc = PptxDocument.open(output)
+    node = doc.shape_index()["milestone.delivery.item_1.node"].shape
+
+    assert node.line.width.pt == 0
+
+
+def test_milestone_draws_hollow_nodes_as_two_filled_circles():
+    mapping = {
+        "template_id": "milestone-test",
+        "component_list": [
+            {
+                "location": "milestone.delivery",
+                "semantic_description": "项目里程碑",
+                "type": "Milestone",
+                "data_source": {"name": "milestones"},
+            }
+        ],
+    }
+    payload = {"milestones": [{"label": "验收", "date": "07-05", "status": "pending"}]}
+
+    output = generate_report(_template_bytes(), mapping, payload, PostProcessingRegistry())
+    doc = PptxDocument.open(output)
+    index = doc.shape_index()
+    outer = index["milestone.delivery.item_1.node"].shape
+    inner = index["milestone.delivery.item_1.node.inner"].shape
+
+    assert outer.fill.fore_color.rgb == RGBColor(0x9A, 0xA6, 0xB2)
+    assert outer.line.width.pt == 0
+    assert inner.fill.fore_color.rgb == RGBColor(0xFF, 0xFF, 0xFF)
+    assert inner.line.width.pt == 0
+    assert inner.width < outer.width
+    assert inner.left + inner.width / 2 == outer.left + outer.width / 2
+
+
 def test_milestone_supports_horizontal_padding_date_color_and_centered_text():
     mapping = {
         "template_id": "milestone-test",

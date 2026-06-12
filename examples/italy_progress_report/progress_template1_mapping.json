@@ -441,27 +441,15 @@
       }
     },
     {
-      "location": "text.next_plan_item_1",
-      "semantic_description": "下期计划第一条",
+      "location": "text.next_plan_item",
+      "semantic_description": "下期计划",
       "type": "Text",
       "config": {
         "preserve_style": true
       },
       "data_source": {
         "name": "next_plan",
-        "template": "1. {{ items[0] }}"
-      }
-    },
-    {
-      "location": "text.next_plan_item_2",
-      "semantic_description": "下期计划第二条",
-      "type": "Text",
-      "config": {
-        "preserve_style": true
-      },
-      "data_source": {
-        "name": "next_plan",
-        "template": "2. {{ items[1] }}"
+        "template": "1. {{ items[0] }}\n2. {{ items[1] }}"
       }
     }
   ]

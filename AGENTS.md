@@ -380,6 +380,20 @@ payload：
 }
 ```
 
+节点默认不使用 shape 描边线，避免小尺寸圆点在导出 PDF/PNG 时边缘发虚。`active` 和 `pending` 默认画成“外圆 + 内圆”的空心节点，其中外圆使用 `line` 色，内圆使用 `fill` 色；`done` 默认画成实心节点。可通过 `hollow_statuses` 指定哪些状态使用空心节点，通过 `node_inner_ratio` 控制内圆相对外圆的尺寸：
+
+```json
+{
+  "config": {
+    "hollow_statuses": ["active", "pending", "risk"],
+    "node_inner_ratio": 0.52,
+    "status_styles": {
+      "risk": {"fill": "FFF5D6", "line": "D99A00", "text": "333333", "hollow": true}
+    }
+  }
+}
+```
+
 ## 如何构造模板
 
 ### 通用规则

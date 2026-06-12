@@ -19,6 +19,8 @@ DEFAULT_STATUS_STYLES: dict[str, dict[str, str]] = {
     "pending": {"fill": "FFFFFF", "line": "9AA6B2", "text": "555555"},
 }
 
+DEFAULT_HOLLOW_STATUSES = {"active", "pending"}
+
 
 def apply_milestone(doc: PptxDocument, shape: Any, component: ComponentMapping, value: Any) -> None:
     try:
@@ -44,6 +46,7 @@ def apply_milestone(doc: PptxDocument, shape: Any, component: ComponentMapping, 
         date_font_size = int(component.config.get("date_font_size", font_size))
         label_font_size = int(component.config.get("label_font_size", 14))
         label_bold = bool(component.config.get("label_bold", True))
+        node_inner_ratio = float(component.config.get("node_inner_ratio", 0.52))
         horizontal_padding = _emu(component.config.get("horizontal_padding"), 0)
         timeline_left = left + horizontal_padding
         timeline_width = max(1, width - horizontal_padding * 2)
@@ -77,6 +80,8 @@ def apply_milestone(doc: PptxDocument, shape: Any, component: ComponentMapping, 
                 line_y - int(node_size / 2),
                 node_size,
                 styles,
+                hollow=_is_hollow_node(component, item, styles),
+                inner_ratio=node_inner_ratio,
             )
             _add_label(
                 slide,
@@ -145,24 +150,55 @@ def _centered_left(center_x: int, width: int) -> int:
     return int(center_x - width / 2)
 
 
-def _item_style(component: ComponentMapping, item: Mapping[str, Any]) -> dict[str, str]:
+def _item_style(component: ComponentMapping, item: Mapping[str, Any]) -> dict[str, Any]:
     status = str(item.get("status", "pending"))
     style = dict(DEFAULT_STATUS_STYLES.get(status, DEFAULT_STATUS_STYLES["pending"]))
     configured_styles = component.config.get("status_styles", {})
     if isinstance(configured_styles, Mapping):
         configured = configured_styles.get(status)
         if isinstance(configured, Mapping):
-            style.update({str(key): str(value) for key, value in configured.items()})
+            style.update({str(key): value for key, value in configured.items()})
     return style
 
 
-def _add_node(slide: Any, name: str, left: int, top: int, size: int, styles: Mapping[str, str]) -> None:
+def _is_hollow_node(component: ComponentMapping, item: Mapping[str, Any], styles: Mapping[str, Any]) -> bool:
+    if "hollow" in styles:
+        return _bool(styles["hollow"])
+    configured = component.config.get("hollow_statuses")
+    if isinstance(configured, list):
+        return str(item.get("status", "pending")) in {str(value) for value in configured}
+    return str(item.get("status", "pending")) in DEFAULT_HOLLOW_STATUSES
+
+
+def _add_node(
+    slide: Any,
+    name: str,
+    left: int,
+    top: int,
+    size: int,
+    styles: Mapping[str, Any],
+    *,
+    hollow: bool,
+    inner_ratio: float,
+) -> None:
+    node_fill = str(styles["line"] if hollow else styles["fill"])
+    node = _add_filled_circle(slide, name, left, top, size, node_fill)
+    if not hollow:
+        return
+
+    inner_size = _same_parity(max(1, int(size * max(0.1, min(inner_ratio, 0.9)))), size)
+    inner_left = int(left + (size - inner_size) / 2)
+    inner_top = int(top + (size - inner_size) / 2)
+    _add_filled_circle(slide, f"{name}.inner", inner_left, inner_top, inner_size, str(styles["fill"]))
+
+
+def _add_filled_circle(slide: Any, name: str, left: int, top: int, size: int, color: str) -> Any:
     node = slide.shapes.add_shape(MSO_SHAPE.OVAL, left, top, size, size)
     node.name = name
     node.fill.solid()
-    node.fill.fore_color.rgb = _rgb(styles["fill"])
-    node.line.color.rgb = _rgb(styles["line"])
-    node.line.width = Pt(1.5)
+    node.fill.fore_color.rgb = _rgb(color)
+    node.line.width = Pt(0)
+    return node
 
 
 def _add_date(
@@ -235,6 +271,24 @@ def _emu(value: Any, default: int) -> int:
         except ValueError:
             return int(default)
     return int(default)
+
+
+def _bool(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, int | float):
+        return bool(value)
+    if isinstance(value, str):
+        return value.strip().lower() in {"1", "true", "yes", "y", "on"}
+    return bool(value)
+
+
+def _same_parity(value: int, reference: int) -> int:
+    if value % 2 == reference % 2:
+        return value
+    if value > 1:
+        return value - 1
+    return value + 1
 
 
 def _rgb(value: str) -> RGBColor:
