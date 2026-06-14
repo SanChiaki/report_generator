@@ -149,6 +149,50 @@ def test_generate_report_processes_post_processing_components_in_parallel(simple
     assert doc.shape_index()["text.summary"].shape.text_frame.text == "text.summary:摘要原始数据"
 
 
+def test_generate_report_feeds_registered_function_result_to_llm_when_post_processing_enabled(simple_template_bytes):
+    mapping = {
+        "template_id": "project-monthly-report-ppt-v1",
+        "component_list": [
+            {
+                "location": "text.report_title",
+                "semantic_description": "报告标题",
+                "type": "Text",
+                "data_source": {
+                    "name": "format_title",
+                    "params": {"project": "project"},
+                    "needs_post_processing": True,
+                },
+            },
+            {
+                "location": "text.summary",
+                "semantic_description": "摘要",
+                "type": "Text",
+                "data_source": {
+                    "name": "summary",
+                    "needs_post_processing": True,
+                },
+            },
+        ],
+    }
+    registry = PostProcessingRegistry()
+    registry.register("format_title", lambda project: f"{project['name']}进度报告")
+    processor = BlockingComponentProcessor()
+
+    output = generate_report(
+        simple_template_bytes,
+        mapping,
+        {"project": {"name": "智慧园区"}, "summary": "摘要原始数据"},
+        registry,
+        processor,
+        llm_concurrency=2,
+    )
+    doc = PptxDocument.open(output)
+
+    assert doc.shape_index()["text.report_title"].shape.text_frame.text == "text.report_title:智慧园区进度报告"
+    assert doc.shape_index()["text.summary"].shape.text_frame.text == "text.summary:摘要原始数据"
+    assert processor.max_active == 2
+
+
 def test_generate_report_limits_post_processing_concurrency(simple_template_bytes):
     mapping = {
         "template_id": "project-monthly-report-ppt-v1",

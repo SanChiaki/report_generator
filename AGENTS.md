@@ -96,8 +96,14 @@ output_bytes = generate_report(template_bytes, mapping_json, payload_json)
 - `name`: 从 payload 顶层读取同名数据。
 - `index`: 在 `name` 指定的数据源内执行 JSONPath；未设置 `name` 时基于整个 payload。
 - `template`: 用 Jinja 模板渲染文本；未设置 `name` 时基于整个 payload。
-- `needs_post_processing`: 为 `true` 时先解析组件传入数据，再结合 `semantic_description`、`prompt`、`data_example` 通过大模型处理，生成符合组件入参的数据。如果 registry 中存在同名后处理函数，则优先走注册函数以保持兼容。
-- `params`: 后处理函数参数映射。
+- `needs_post_processing`: 为 `true` 时必须经过大模型处理。若 `name` 命中注册函数，则先调用函数精简/整理数据，再把函数返回值结合 `semantic_description`、`prompt`、`data_example` 传给大模型，生成符合组件入参的数据；未命中注册函数时，则把 `index`、`template` 或 `name` 解析出的数据直接传给大模型。
+- `params`: 注册函数参数映射，格式为 `{"函数参数名": "payload顶层字段名"}`。`"$"` 表示传入整个 payload；为兼容 Excel 报告，`{"sr_api_data": "sr_api_data"}` 在 payload 没有顶层 `sr_api_data` 时会回退传入整个 payload。
+
+内置注册函数：
+
+- `general_project_delivery_plan`: 从 `全量数据.项目阶段` 输出项目交付计划/任务表对象数组。
+- `general_top_risks_and_issues`: 从 `周期数据.问题与风险` 或 `全量数据.问题与风险` 输出表格行。
+- `general_top_risks_and_issues_v2`: 从问题与风险输出 `TopIssues` 组件需要的 `{ "items": [...] }` 卡片数据。
 
 示例：
 
@@ -138,6 +144,40 @@ output_bytes = generate_report(template_bytes, mapping_json, payload_json)
   "type": "Table",
   "data_source": {
     "name": "raw_project_logs",
+    "needs_post_processing": true
+  }
+}
+```
+
+函数型数据源直接渲染示例：
+
+```json
+{
+  "location": "top_issues.cards",
+  "semantic_description": "TOP问题与风险动态卡片列表",
+  "type": "TopIssues",
+  "data_source": {
+    "name": "general_top_risks_and_issues_v2",
+    "params": {
+      "sr_api_data": "sr_api_data"
+    }
+  }
+}
+```
+
+函数型数据源作为大模型前置处理示例：
+
+```json
+{
+  "location": "text.key_issue_summary",
+  "semantic_description": "关键问题摘要",
+  "type": "Text",
+  "prompt": "根据输入的问题风险列表，提炼一句关键问题摘要。",
+  "data_source": {
+    "name": "general_top_risks_and_issues_v2",
+    "params": {
+      "sr_api_data": "sr_api_data"
+    },
     "needs_post_processing": true
   }
 }

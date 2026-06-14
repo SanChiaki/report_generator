@@ -24,6 +24,12 @@ def resolve_component_value(
     if source is None:
         return None
 
+    if source.name and registry.has(source.name):
+        value = _resolve_registered_processor(component, source, payload, registry)
+        if source.needs_post_processing:
+            return _process_value(component, value, processor)
+        return value
+
     if source.needs_post_processing:
         return _resolve_post_processed(component, source, payload, registry, processor)
 
@@ -110,18 +116,24 @@ def _resolve_post_processed(
     registry: PostProcessingRegistry,
     processor: ComponentDataProcessor | None,
 ) -> Any:
-    if source.name and registry.has(source.name):
-        return _resolve_registered_post_processor(component, source, payload, registry)
+    return _process_value(component, _resolve_pre_processed_value(component, source, payload), processor)
+
+
+def _process_value(
+    component: ComponentMapping,
+    value: Any,
+    processor: ComponentDataProcessor | None,
+) -> Any:
     if processor is None:
         raise ReportGenerationError(
             ErrorCode.POST_PROCESSING_FAILED,
             f"组件 {component.location} 需要大模型后处理，但未配置组件数据处理器",
             component,
         )
-    return processor.process(component, _resolve_pre_processed_value(component, source, payload))
+    return processor.process(component, value)
 
 
-def _resolve_registered_post_processor(
+def _resolve_registered_processor(
     component: ComponentMapping,
     source: DataSource,
     payload: dict[str, Any],
@@ -129,13 +141,7 @@ def _resolve_registered_post_processor(
 ) -> Any:
     params: dict[str, Any] = {}
     for param_name, payload_key in source.params.items():
-        if payload_key not in payload:
-            raise ReportGenerationError(
-                ErrorCode.DATA_SOURCE_NOT_FOUND,
-                f"组件 {component.location} 的参数 {param_name} 引用了不存在的数据 {payload_key}",
-                component,
-            )
-        params[param_name] = payload[payload_key]
+        params[param_name] = _resolve_processor_param(component, param_name, payload_key, payload)
     try:
         return registry.call(str(source.name), **params)
     except Exception as exc:
@@ -144,6 +150,25 @@ def _resolve_registered_post_processor(
             f"组件 {component.location} 的后处理失败: {exc}",
             component,
         ) from exc
+
+
+def _resolve_processor_param(
+    component: ComponentMapping,
+    param_name: str,
+    payload_key: Any,
+    payload: dict[str, Any],
+) -> Any:
+    if payload_key == "$":
+        return payload
+    if isinstance(payload_key, str) and payload_key in payload:
+        return payload[payload_key]
+    if param_name == "sr_api_data" and payload_key == "sr_api_data":
+        return payload
+    raise ReportGenerationError(
+        ErrorCode.DATA_SOURCE_NOT_FOUND,
+        f"组件 {component.location} 的参数 {param_name} 引用了不存在的数据 {payload_key}",
+        component,
+    )
 
 
 def _resolve_pre_processed_value(component: ComponentMapping, source: DataSource, payload: dict[str, Any]) -> Any:

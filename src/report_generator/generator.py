@@ -11,6 +11,7 @@ from report_generator.components.shape import apply_shape
 from report_generator.components.table import apply_table
 from report_generator.components.text import apply_text
 from report_generator.components.top_issues import apply_top_issues
+from report_generator.builtin_processors import default_registry
 from report_generator.datasource import resolve_component_value
 from report_generator.errors import ErrorCode, ReportGenerationError
 from report_generator.llm import ComponentDataProcessor, OpenAICompletionProcessor
@@ -27,7 +28,7 @@ def generate_report(
     processor: ComponentDataProcessor | None = None,
     llm_concurrency: int | None = None,
 ) -> bytes:
-    registry = registry or PostProcessingRegistry()
+    registry = registry or default_registry()
     processor = processor or OpenAICompletionProcessor()
     llm_concurrency = _resolve_llm_concurrency(llm_concurrency)
     mapping = ReportMapping.model_validate(mapping_payload)

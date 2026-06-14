@@ -1,0 +1,387 @@
+{
+  "template_id": "italy-progress-template1-v1",
+  "component_list": [
+    {
+      "location": "text.cover_title",
+      "semantic_description": "封面报告标题",
+      "type": "Text",
+      "config": {
+        "preserve_style": true
+      },
+      "data_source": {
+        "template": "{{ 项目信息['项目名称'] }}进度报告"
+      }
+    },
+    {
+      "location": "text.cover_period",
+      "semantic_description": "封面报告周期",
+      "type": "Text",
+      "prompt": "从报告名称中提取报告周期，输出格式必须为：报告周期：YYYY-MM-DD – YYYY-MM-DD。如果无法提取，输出空字符串。",
+      "data_example": "报告周期：2026-06-01 – 2026-06-07",
+      "config": {
+        "preserve_style": true
+      },
+      "data_source": {
+        "index": "$['报告名称']",
+        "needs_post_processing": true
+      }
+    },
+    {
+      "location": "text.project_overview_summary",
+      "semantic_description": "项目信息页项目概述",
+      "type": "Text",
+      "prompt": "根据项目信息、项目阶段和问题风险生成一句项目概述，不超过35个汉字，不换行。无内容时输出无。",
+      "data_example": "项目进行中，阶段任务持续推进，风险处理中。",
+      "config": {
+        "preserve_style": true
+      },
+      "data_source": {
+        "needs_post_processing": true
+      }
+    },
+    {
+      "location": "text.project_name",
+      "semantic_description": "项目名称",
+      "type": "Text",
+      "config": {
+        "preserve_style": true
+      },
+      "data_source": {
+        "index": "$['项目信息']['项目名称']"
+      }
+    },
+    {
+      "location": "text.project_code",
+      "semantic_description": "项目编码",
+      "type": "Text",
+      "config": {
+        "preserve_style": true
+      },
+      "data_source": {
+        "index": "$['项目信息']['项目编号']"
+      }
+    },
+    {
+      "location": "text.customer_name",
+      "semantic_description": "客户名称",
+      "type": "Text",
+      "config": {
+        "preserve_style": true
+      },
+      "data_source": {
+        "index": "$['项目信息']['客户名称']"
+      }
+    },
+    {
+      "location": "text.project_manager",
+      "semantic_description": "项目经理或项目PD",
+      "type": "Text",
+      "config": {
+        "preserve_style": true
+      },
+      "data_source": {
+        "index": "$['项目信息']['项目经理']"
+      }
+    },
+    {
+      "location": "text.planned_start_date",
+      "semantic_description": "计划开始时间",
+      "type": "Text",
+      "config": {
+        "preserve_style": true
+      },
+      "data_source": {
+        "index": "$['项目信息']['计划开始时间']"
+      }
+    },
+    {
+      "location": "text.planned_end_date",
+      "semantic_description": "计划结束时间",
+      "type": "Text",
+      "config": {
+        "preserve_style": true
+      },
+      "data_source": {
+        "index": "$['项目信息']['计划结束时间']"
+      }
+    },
+    {
+      "location": "text.report_date",
+      "semantic_description": "报告日期",
+      "type": "Text",
+      "config": {
+        "preserve_style": true
+      },
+      "data_source": {
+        "index": "$['项目信息']['报告日期']"
+      }
+    },
+    {
+      "location": "text.project_status_value",
+      "semantic_description": "项目状态",
+      "type": "Text",
+      "config": {
+        "preserve_style": true
+      },
+      "data_source": {
+        "index": "$['项目信息']['项目状态']"
+      }
+    },
+    {
+      "location": "text.progress_status_value",
+      "semantic_description": "进度状态",
+      "type": "Text",
+      "prompt": "根据项目进度、计划结束时间和任务状态判断进度状态，只输出一个短语：状态正常、需要关注或存在风险。",
+      "data_example": "需要关注",
+      "config": {
+        "preserve_style": true
+      },
+      "data_source": {
+        "needs_post_processing": true
+      }
+    },
+    {
+      "location": "text.project_progress_value",
+      "semantic_description": "项目进度",
+      "type": "Text",
+      "config": {
+        "preserve_style": true
+      },
+      "data_source": {
+        "template": "累积完成 {{ (项目信息['项目进度'] | float * 100) | round | int }}%"
+      }
+    },
+    {
+      "location": "text.overall_progress_summary",
+      "semantic_description": "项目整体概况",
+      "type": "Text",
+      "prompt": "直接总结整体进展，不要分点陈述，一句话内完成输出，不超过35个汉字。无内容时输出无。",
+      "data_example": "项目处于进行中，调测与验收相关任务持续推进。",
+      "config": {
+        "preserve_style": true
+      },
+      "data_source": {
+        "needs_post_processing": true
+      }
+    },
+    {
+      "location": "text.key_conclusion",
+      "semantic_description": "关键结论",
+      "type": "Text",
+      "prompt": "根据项目进度、阶段任务和问题风险生成一句关键结论，必须以“关键结论：”开头，不超过35个汉字。",
+      "data_example": "关键结论：整体推进中，逾期与待分配任务需关注。",
+      "config": {
+        "preserve_style": true
+      },
+      "data_source": {
+        "needs_post_processing": true
+      }
+    },
+    {
+      "location": "text.key_progress",
+      "semantic_description": "本期关键进展",
+      "type": "Text",
+      "prompt": "根据周期数据中的项目阶段和项目进展总结本期关键进展，不超过40个汉字，不换行。无内容时输出未找到进展数据。",
+      "data_example": "本期完成部分设计、安装与调测任务推进。",
+      "config": {
+        "preserve_style": true
+      },
+      "data_source": {
+        "index": "$['周期数据']",
+        "needs_post_processing": true
+      }
+    },
+    {
+      "location": "text.risk_issue_summary",
+      "semantic_description": "风险及问题管理摘要",
+      "type": "Text",
+      "prompt": "根据问题与风险列表统计已关闭和处理中问题数量，生成一句摘要，格式为：本期成功关闭 x 个问题或风险，现有 y 个问题或风险在处理中。",
+      "data_example": "本期成功关闭 0 个问题或风险，现有 9 个问题或风险在处理中。",
+      "config": {
+        "preserve_style": true
+      },
+      "data_source": {
+        "index": "$['周期数据']['问题与风险']",
+        "needs_post_processing": true
+      }
+    },
+    {
+      "location": "table.delivery_plan",
+      "semantic_description": "项目交付计划任务表",
+      "type": "Table",
+      "config": {
+        "max_rows": 40,
+        "max_columns": 7,
+        "order": [
+          "阶段名称",
+          "任务名称",
+          "产品线",
+          "任务状态",
+          "计划完成时间",
+          "实际完成时间",
+          "责任人"
+        ],
+        "column_value_styles": {
+          "任务状态": {
+            "已完成": {
+              "color": "10B981",
+              "bold": true
+            },
+            "进行中": {
+              "color": "C00000",
+              "bold": true
+            },
+            "未开始": {
+              "color": "000000",
+              "bold": true
+            },
+            "待分配": {
+              "color": "666666",
+              "bold": true
+            },
+            "延期": {
+              "color": "D99A00",
+              "bold": true
+            },
+            "暂停": {
+              "color": "666666",
+              "bold": true
+            },
+            "取消": {
+              "color": "999999",
+              "bold": true
+            }
+          }
+        }
+      },
+      "data_source": {
+        "name": "general_project_delivery_plan",
+        "params": {
+          "sr_api_data": "sr_api_data"
+        }
+      }
+    },
+    {
+      "location": "milestone.delivery",
+      "semantic_description": "项目交付里程碑动态时间轴",
+      "type": "Milestone",
+      "prompt": "提取阶段名称作为里程碑节点，同一阶段只保留一个节点；每个阶段使用最晚的实际完成时间或计划完成时间作为日期。已完成阶段 status 输出 done，进行中阶段输出 active，其余输出 pending。输出格式必须为 {\"items\":[{\"label\":\"阶段名\",\"date\":\"MM-DD\",\"status\":\"done|active|pending\"}]}。",
+      "data_example": {
+        "items": [
+          {
+            "label": "设计",
+            "date": "06-28",
+            "status": "active"
+          },
+          {
+            "label": "验收",
+            "date": "07-05",
+            "status": "pending"
+          }
+        ]
+      },
+      "config": {
+        "node_size": 0.22,
+        "date_height": 0.24,
+        "label_height": 0.36,
+        "date_font_size": 12,
+        "label_font_size": 14,
+        "line_color": "44546A",
+        "status_styles": {
+          "done": {
+            "fill": "0052CC",
+            "line": "0052CC",
+            "text": "333333"
+          },
+          "active": {
+            "fill": "FFFFFF",
+            "line": "0052CC",
+            "text": "666666"
+          },
+          "pending": {
+            "fill": "FFFFFF",
+            "line": "0052CC",
+            "text": "666666"
+          },
+          "risk": {
+            "fill": "FFF5D6",
+            "line": "D99A00",
+            "text": "333333"
+          }
+        },
+        "preserve_anchor": true,
+        "label_bold": true,
+        "line_y_ratio": 0.5,
+        "line_width": 1.5,
+        "horizontal_padding": 0.45,
+        "date_color": "C00000"
+      },
+      "data_source": {
+        "index": "$['全量数据']['项目阶段']",
+        "needs_post_processing": true
+      }
+    },
+    {
+      "location": "top_issues.cards",
+      "semantic_description": "TOP问题与风险动态卡片列表",
+      "type": "TopIssues",
+      "prompt": "从问题与风险列表中选择最重要的 TOP 问题，优先紧急程度高、状态未关闭、要求解决日期近的条目。最多输出 3 条。输出格式必须为 {\"items\":[{\"severity\":\"紧急|重要|一般\",\"created_at\":\"问题产生时间\",\"description\":\"问题及风险描述\",\"action\":\"问题解决措施与进展\",\"owner\":\"责任人\",\"status\":\"问题状态\",\"due_date\":\"YYYY-MM-DD\"}]}。如果解决措施为空，action 输出 待补充处理措施。",
+      "data_example": {
+        "items": [
+          {
+            "severity": "紧急",
+            "created_at": "2026-06-09 14:21:00",
+            "description": "项目开工25天后，仍未发送开工报告",
+            "action": "待补充处理措施",
+            "owner": "暂未分配",
+            "status": "处理中",
+            "due_date": "2026-06-24"
+          }
+        ]
+      },
+      "config": {
+        "card_gap": 0.12,
+        "strip_width": 0.08,
+        "severity_width": 0.7,
+        "styles": {
+          "紧急": {
+            "accent": "D64545"
+          },
+          "重要": {
+            "accent": "FF8A00"
+          },
+          "一般": {
+            "accent": "F5C400"
+          }
+        },
+        "severity_font_size": 18,
+        "description_font_size": 13,
+        "action_font_size": 13,
+        "meta_font_size": 12,
+        "description_color": "0052CC",
+        "action_color": "0052CC",
+        "meta_color": "333333"
+      },
+      "data_source": {
+        "name": "general_top_risks_and_issues_v2",
+        "params": {
+          "sr_api_data": "sr_api_data"
+        }
+      }
+    },
+    {
+      "location": "text.next_plan_item",
+      "semantic_description": "下期计划",
+      "type": "Text",
+      "prompt": "从周期数据中的项目阶段提取下期计划。优先选择未完成、进行中、待分配且计划完成时间最近的任务，去重，不展示调休类内容。输出两行文本，格式严格为：1. xxx\\n2. xxx。如果没有明确计划，输出：1. 未找到下期工作计划\\n2. 未找到下期工作计划。",
+      "data_example": "1. 完成配置检查\n2. 推进技能传递",
+      "config": {
+        "preserve_style": true
+      },
+      "data_source": {
+        "index": "$['周期数据']['项目阶段']",
+        "needs_post_processing": true
+      }
+    }
+  ]
+}

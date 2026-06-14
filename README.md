@@ -39,6 +39,10 @@ LLM_CONCURRENCY=4
 Use `COMPLETION_MODE=completions` for legacy OpenAI `/v1/completions` compatible endpoints.
 `LLM_CONCURRENCY` controls the default maximum number of concurrent LLM post-processing calls.
 
+Named data source functions can be registered in `PostProcessingRegistry`. The service includes built-in functions such as `general_project_delivery_plan`, `general_top_risks_and_issues`, and `general_top_risks_and_issues_v2`.
+
+When `data_source.name` matches a registered function and `needs_post_processing` is not set, the function output is rendered directly. When `needs_post_processing=true`, the function output is used as the input to the LLM processor; the component still goes through LLM post-processing.
+
 ## Example
 
 Build the sample template:
