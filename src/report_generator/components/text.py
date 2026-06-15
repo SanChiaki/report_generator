@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import math
+from collections.abc import Mapping
 from typing import Any
 
+from pptx.dml.color import RGBColor
 from pptx.util import Pt
 
 from report_generator.errors import ErrorCode, ReportGenerationError
@@ -19,7 +21,8 @@ def apply_text(shape: Any, component: ComponentMapping, value: Any) -> None:
             component,
         )
 
-    text = "" if value is None else str(value)
+    rich_text = _rich_text_runs(value)
+    text = _rich_text_plain_text(rich_text) if rich_text is not None else ("" if value is None else str(value))
     min_font_size = int(component.config.get("min_font_size", 10))
     start_font_size = _existing_font_size(shape) or int(component.config.get("font_size", 18))
     if component.config.get("preserve_style"):
@@ -29,6 +32,9 @@ def apply_text(shape: Any, component: ComponentMapping, value: Any) -> None:
                 f"组件 {component.location} 的文本在模板原始字号 {start_font_size} 下无法放入模板区域",
                 component,
             )
+        if rich_text is not None:
+            _apply_rich_text(shape, rich_text, preserve_style=True)
+            return
         _apply_text_preserving_style(shape, text)
         return
 
@@ -40,6 +46,10 @@ def apply_text(shape: Any, component: ComponentMapping, value: Any) -> None:
             component,
         )
 
+    if rich_text is not None:
+        _apply_rich_text(shape, rich_text, default_font_size=fitted_font_size)
+        return
+
     text_frame = shape.text_frame
     text_frame.clear()
     lines = text.splitlines() or [""]
@@ -48,6 +58,72 @@ def apply_text(shape: Any, component: ComponentMapping, value: Any) -> None:
         run = paragraph.add_run()
         run.text = line
         run.font.size = Pt(fitted_font_size)
+
+
+def _rich_text_runs(value: Any) -> list[dict[str, Any]] | None:
+    if not isinstance(value, Mapping):
+        return None
+    runs = value.get("rich_text")
+    if runs is None:
+        runs = value.get("runs")
+    if runs is None:
+        return None
+    if not isinstance(runs, list):
+        return None
+    normalized: list[dict[str, Any]] = []
+    for item in runs:
+        if isinstance(item, Mapping):
+            normalized.append(dict(item))
+        else:
+            normalized.append({"text": "" if item is None else str(item)})
+    return normalized
+
+
+def _rich_text_plain_text(runs: list[dict[str, Any]]) -> str:
+    return "".join(str(run.get("text", "")) for run in runs)
+
+
+def _apply_rich_text(
+    shape: Any,
+    runs: list[dict[str, Any]],
+    *,
+    preserve_style: bool = False,
+    default_font_size: int | None = None,
+) -> None:
+    text_frame = shape.text_frame
+    text_frame.clear()
+    paragraph = text_frame.paragraphs[0]
+    for item in runs:
+        pieces = str(item.get("text", "")).split("\n")
+        for index, piece in enumerate(pieces):
+            if index > 0:
+                paragraph = text_frame.add_paragraph()
+            run = paragraph.add_run()
+            run.text = piece
+            _apply_run_style(run, item, default_font_size=default_font_size, preserve_style=preserve_style)
+
+
+def _apply_run_style(
+    run: Any,
+    style: Mapping[str, Any],
+    *,
+    default_font_size: int | None,
+    preserve_style: bool,
+) -> None:
+    if "font_size" in style:
+        run.font.size = Pt(int(style["font_size"]))
+    elif default_font_size is not None and not preserve_style:
+        run.font.size = Pt(default_font_size)
+    if style.get("font_name"):
+        run.font.name = str(style["font_name"])
+    if "bold" in style:
+        run.font.bold = _bool(style["bold"])
+    if "italic" in style:
+        run.font.italic = _bool(style["italic"])
+    if "underline" in style:
+        run.font.underline = _bool(style["underline"])
+    if style.get("color"):
+        run.font.color.rgb = _rgb(str(style["color"]))
 
 
 def _apply_text_preserving_style(shape: Any, text: str) -> None:
@@ -96,3 +172,24 @@ def _fits(shape: Any, text: str, font_size: int) -> bool:
     line_height_in = (font_size * 1.25) / 72
     capacity = max(1, math.floor(height_in / line_height_in))
     return needed_lines <= capacity
+
+
+def _bool(value: Any) -> bool:
+    if isinstance(value, bool):
+        return value
+    if isinstance(value, int | float):
+        return bool(value)
+    if isinstance(value, str):
+        return value.strip().lower() in {"1", "true", "yes", "y", "on"}
+    return bool(value)
+
+
+def _rgb(value: str) -> RGBColor:
+    normalized = value.lstrip("#")
+    if len(normalized) != 6 or any(char not in "0123456789abcdefABCDEF" for char in normalized):
+        raise ValueError(f"invalid RGB color {value!r}")
+    return RGBColor(
+        int(normalized[0:2], 16),
+        int(normalized[2:4], 16),
+        int(normalized[4:6], 16),
+    )

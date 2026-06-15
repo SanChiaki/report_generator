@@ -253,6 +253,50 @@ def test_top_issues_uses_template_like_default_font_sizes():
     assert meta_run.font.size.pt == 12
 
 
+def test_top_issues_styles_description_and_action_labels_separately_from_values():
+    mapping = {
+        "template_id": "top-issues-test",
+        "component_list": [
+            {
+                "location": "top_issues.cards",
+                "semantic_description": "TOP 问题与风险",
+                "type": "TopIssues",
+                "config": {
+                    "description_color": "0052CC",
+                    "action_color": "0052CC",
+                },
+                "data_source": {"name": "issues"},
+            }
+        ],
+    }
+    payload = {
+        "issues": [
+            {
+                "severity": "紧急",
+                "description": "验收窗口未确认",
+                "action": "协调客户确认备选时间",
+            }
+        ]
+    }
+
+    output = generate_report(_template_bytes(), mapping, payload, PostProcessingRegistry())
+    doc = PptxDocument.open(output)
+    index = doc.shape_index()
+    description_runs = index["top_issues.cards.item_1.description"].shape.text_frame.paragraphs[0].runs
+    action_runs = index["top_issues.cards.item_1.action"].shape.text_frame.paragraphs[0].runs
+
+    assert [run.text for run in description_runs] == ["问题描述：", "验收窗口未确认"]
+    assert description_runs[0].font.bold is True
+    assert description_runs[0].font.color.rgb == RGBColor(0x00, 0x52, 0xCC)
+    assert description_runs[1].font.bold is False
+    assert description_runs[1].font.color.rgb == RGBColor(0x33, 0x33, 0x33)
+    assert [run.text for run in action_runs] == ["解决措施与进展：", "协调客户确认备选时间"]
+    assert action_runs[0].font.bold is True
+    assert action_runs[0].font.color.rgb == RGBColor(0x00, 0x52, 0xCC)
+    assert action_runs[1].font.bold is False
+    assert action_runs[1].font.color.rgb == RGBColor(0x33, 0x33, 0x33)
+
+
 def test_top_issues_treats_numeric_dimensions_as_inches():
     mapping = {
         "template_id": "top-issues-test",

@@ -189,7 +189,7 @@ output_bytes = generate_report(template_bytes, mapping_json, payload_json)
 
 用途：替换文本框、标题、占位符中的文本。
 
-数据：任意值，最终会转成字符串。
+数据：普通值会转成字符串。富文本使用 `rich_text` 数组；为兼容 PPT run 语义，也支持 `runs` 作为别名。
 
 常用配置：
 
@@ -198,6 +198,29 @@ output_bytes = generate_report(template_bytes, mapping_json, payload_json)
 - `min_font_size`: 自动缩小字号时的最小字号。
 
 建议：模板文本组件默认使用 `preserve_style: true`，让字号、颜色、粗细由模板决定。
+
+富文本示例：
+
+```json
+{
+  "rich_text": [
+    {
+      "text": "关键结论：",
+      "color": "0052CC",
+      "font_size": 16,
+      "font_name": "Microsoft YaHei",
+      "bold": true
+    },
+    {
+      "text": "整体推进中",
+      "color": "333333",
+      "font_size": 14
+    }
+  ]
+}
+```
+
+支持的片段字段：`text`、`color`、`font_size`、`font_name`、`bold`、`italic`、`underline`。换行直接写在任意片段的 `text` 中，例如 `"关键结论：第一行\n第二行"`；生成时会拆成 PPT 段落，并把该片段样式应用到换行后的文本。
 
 ### Table
 
@@ -383,6 +406,8 @@ payload：
   "data_source": {"name": "top_issues"}
 }
 ```
+
+默认情况下，`问题描述：`、`解决措施与进展：` 标签使用蓝色粗体，标签后的具体内容使用黑色常规字重。`description_color`、`action_color` 兼容作为标签颜色；也可用 `description_label_color`、`description_value_color`、`action_label_color`、`action_value_color` 分别配置标签和内容颜色。
 
 可配置 `description_template`、`action_template`、`meta_template` 自定义卡片文本。模板上下文就是单条 issue 对象。
 

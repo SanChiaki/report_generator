@@ -65,7 +65,7 @@ def apply_top_issues(doc: PptxDocument, shape: Any, component: ComponentMapping,
 
             text_left = left + strip_width + padding + severity_width
             text_width = width - strip_width - padding - severity_width - padding
-            _add_text(
+            _add_labeled_text(
                 slide,
                 f"{component.location}.item_{index}.description",
                 _render_issue_template(component, "description_template", _default_description(issue), issue),
@@ -74,10 +74,11 @@ def apply_top_issues(doc: PptxDocument, shape: Any, component: ComponentMapping,
                 text_width,
                 int(card_height * 0.26),
                 font_size=int(component.config.get("description_font_size", 13)),
-                bold=True,
-                color=str(component.config.get("description_color", "0B63CE")),
+                label_color=str(component.config.get("description_label_color", component.config.get("description_color", "0B63CE"))),
+                value_color=str(component.config.get("description_value_color", "333333")),
+                label_prefixes=("问题描述：", "问题描述:"),
             )
-            _add_text(
+            _add_labeled_text(
                 slide,
                 f"{component.location}.item_{index}.action",
                 _render_issue_template(component, "action_template", "解决措施与进展：{{ action }}", issue),
@@ -86,8 +87,9 @@ def apply_top_issues(doc: PptxDocument, shape: Any, component: ComponentMapping,
                 text_width,
                 int(card_height * 0.24),
                 font_size=int(component.config.get("action_font_size", 13)),
-                bold=True,
-                color=str(component.config.get("action_color", "0B63CE")),
+                label_color=str(component.config.get("action_label_color", component.config.get("action_color", "0B63CE"))),
+                value_color=str(component.config.get("action_value_color", "333333")),
+                label_prefixes=("解决措施与进展：", "解决措施与进展:"),
             )
             _add_text(
                 slide,
@@ -220,6 +222,50 @@ def _add_text(
     run.font.size = Pt(font_size)
     run.font.bold = bold
     run.font.color.rgb = _rgb(color)
+
+
+def _add_labeled_text(
+    slide: Any,
+    name: str,
+    text: str,
+    left: int,
+    top: int,
+    width: int,
+    height: int,
+    *,
+    font_size: int,
+    label_color: str,
+    value_color: str,
+    label_prefixes: tuple[str, ...],
+) -> None:
+    textbox = slide.shapes.add_textbox(left, top, width, height)
+    textbox.name = name
+    text_frame = textbox.text_frame
+    text_frame.clear()
+    text_frame.margin_left = 0
+    text_frame.margin_right = 0
+    text_frame.margin_top = 0
+    text_frame.margin_bottom = 0
+    paragraph = text_frame.paragraphs[0]
+    label, value = _split_labeled_text(text, label_prefixes)
+    _add_run(paragraph, label, font_size=font_size, bold=True, color=label_color)
+    if value:
+        _add_run(paragraph, value, font_size=font_size, bold=False, color=value_color)
+
+
+def _add_run(paragraph: Any, text: str, *, font_size: int, bold: bool, color: str) -> None:
+    run = paragraph.add_run()
+    run.text = text
+    run.font.size = Pt(font_size)
+    run.font.bold = bold
+    run.font.color.rgb = _rgb(color)
+
+
+def _split_labeled_text(text: str, label_prefixes: tuple[str, ...]) -> tuple[str, str]:
+    for prefix in label_prefixes:
+        if text.startswith(prefix):
+            return prefix, text[len(prefix) :]
+    return text, ""
 
 
 def _render_issue_template(
