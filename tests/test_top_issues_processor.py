@@ -27,6 +27,36 @@ def _template_bytes() -> bytes:
     return output.getvalue()
 
 
+def _preview_parts_template_bytes() -> bytes:
+    from io import BytesIO
+
+    prs = Presentation()
+    slide = prs.slides.add_slide(prs.slide_layouts[6])
+    anchor = slide.shapes.add_shape(
+        MSO_SHAPE.RECTANGLE,
+        Inches(0.5),
+        Inches(0.8),
+        Inches(8.5),
+        Inches(1.0),
+    )
+    anchor.name = "top_issues.cards"
+    anchor.fill.solid()
+    anchor.fill.fore_color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
+    preview_card = slide.shapes.add_shape(
+        MSO_SHAPE.RECTANGLE,
+        Inches(0.5),
+        Inches(0.8),
+        Inches(8.5),
+        Inches(1.0),
+    )
+    preview_card.name = "top_issues.cards.preview.card"
+    preview_card.fill.solid()
+    preview_card.fill.fore_color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
+    output = BytesIO()
+    prs.save(output)
+    return output.getvalue()
+
+
 def test_top_issues_draws_dynamic_vertical_cards_with_severity_styles():
     mapping = {
         "template_id": "top-issues-test",
@@ -119,6 +149,29 @@ def test_top_issues_preview_mode_replace_removes_template_preview_shape():
 
     assert "top_issues.cards" not in index
     assert index["top_issues.cards.item_1.description"].shape.text == "问题描述：验收窗口未确认"
+
+
+def test_top_issues_preview_mode_replace_removes_named_preview_parts():
+    mapping = {
+        "template_id": "top-issues-test",
+        "component_list": [
+            {
+                "location": "top_issues.cards",
+                "semantic_description": "TOP 问题与风险",
+                "type": "TopIssues",
+                "config": {"preview_mode": "replace"},
+                "data_source": {"name": "issues"},
+            }
+        ],
+    }
+    payload = {"issues": [{"severity": "紧急", "description": "验收窗口未确认"}]}
+
+    output = generate_report(_preview_parts_template_bytes(), mapping, payload, PostProcessingRegistry())
+    doc = PptxDocument.open(output)
+    index = doc.shape_index()
+
+    assert "top_issues.cards.preview.card" not in index
+    assert "top_issues.cards.item_1.card" in index
 
 
 def test_top_issues_accepts_items_object_and_custom_templates():

@@ -42,6 +42,7 @@ def apply_top_issues(doc: PptxDocument, shape: Any, component: ComponentMapping,
                 component,
             )
 
+        _remove_preview_parts(doc, slide, component.location)
         doc.remove_shape(shape)
 
         for index, issue in enumerate(issues, start=1):
@@ -138,6 +139,13 @@ def _normalize_issues(component: ComponentMapping, value: Any) -> list[dict[str,
         normalized.setdefault("due_date", "")
         issues.append(normalized)
     return issues
+
+
+def _remove_preview_parts(doc: PptxDocument, slide: Any, component_location: str) -> None:
+    preview_prefix = f"{component_location}.preview."
+    for preview_shape in list(slide.shapes):
+        if str(getattr(preview_shape, "name", "")).startswith(preview_prefix):
+            doc.remove_shape(preview_shape)
 
 
 def _issue_style(component: ComponentMapping, issue: Mapping[str, Any]) -> dict[str, str]:

@@ -346,7 +346,7 @@ payload：
 
 用途：生成“TOP 问题与风险”动态卡片列表。
 
-模板：在 PPT 中放一个可见的示例卡片或普通 shape 作为预览锚点，命名为例如 `top_issues.cards`。生成时使用 `preview_mode: "replace"` 删除该预览 shape，并从它的 `left/top/width/height` 开始垂直绘制真实卡片。卡片数量按数据动态生成；超出页面空间时继续向下排布，不自动分页。
+模板：在 PPT 中放一个可见的示例卡片或普通 shape 作为预览锚点，命名为例如 `top_issues.cards`。如需让用户在模板里看到完整卡片效果，可在锚点上方放示例色条、严重程度、描述、措施、元信息等元素，并统一命名为 `top_issues.cards.preview.*`。生成时使用 `preview_mode: "replace"` 删除锚点和所有 `top_issues.cards.preview.*` 预览元素，并从锚点的 `left/top/width/height` 开始垂直绘制真实卡片。卡片数量按数据动态生成；超出页面空间时继续向下排布，不自动分页。
 
 数据可以是数组，也可以是包含 `items` 的对象：
 
@@ -515,13 +515,14 @@ payload：
 
 适合问题/风险卡片数量变化的页面：
 
-1. 在需要开始绘制卡片的位置放一个可见示例卡片，或者放一个普通 shape。
-2. 将该预览 shape 命名为 `top_issues.cards`。
-3. mapping 使用 `TopIssues`。
-4. mapping 中设置 `config.preview_mode = "replace"`。
-5. payload 传入 issue 数组。
+1. 在需要开始绘制卡片的位置放一个可见卡片背景 shape。
+2. 将这个定位锚点命名为 `top_issues.cards`。
+3. 如需让用户在模板中看到示例卡片内容，可在锚点上方放示例色条、严重程度、描述、措施、元信息，并统一命名为 `top_issues.cards.preview.*`。
+4. mapping 使用 `TopIssues`。
+5. mapping 中设置 `config.preview_mode = "replace"`。
+6. payload 传入 issue 数组。
 
-`TopIssues` 当前是程序生成卡片，预览 shape 只用于模板可视化和定位，不复制模板中的复杂组合卡片；如需完全复刻 PPT 手工设计的卡片内部布局，需要后续扩展模板组复制模式。
+`TopIssues` 当前是程序生成卡片，预览元素只用于模板可视化和定位，不复制模板中的复杂组合卡片；如需完全复刻 PPT 手工设计的卡片内部布局，需要后续扩展模板组复制模式。
 
 ### 里程碑模板
 
