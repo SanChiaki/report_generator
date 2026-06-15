@@ -2,6 +2,7 @@ from pptx import Presentation
 from pptx.dml.color import RGBColor
 from pptx.enum.dml import MSO_THEME_COLOR
 from pptx.enum.shapes import MSO_SHAPE
+from pptx.enum.text import MSO_ANCHOR
 from pptx.util import Inches
 
 from report_generator.generator import generate_report
@@ -401,6 +402,31 @@ def test_milestone_supports_horizontal_padding_date_color_and_centered_text():
     assert second_date.left + second_date.width / 2 == second_node_center
     assert second_label.left + second_label.width / 2 == second_node_center
     assert date_run.font.color.rgb == RGBColor(0xC0, 0x00, 0x00)
+
+
+def test_milestone_vertically_middle_aligns_date_and_label_text():
+    mapping = {
+        "template_id": "milestone-test",
+        "component_list": [
+            {
+                "location": "milestone.delivery",
+                "semantic_description": "项目里程碑",
+                "type": "Milestone",
+                "config": {"date_height": 0.32, "label_height": 0.36},
+                "data_source": {"name": "milestones"},
+            }
+        ],
+    }
+    payload = {"milestones": [{"label": "验收", "date": "2026-07-20", "status": "done"}]}
+
+    output = generate_report(_template_bytes(), mapping, payload, PostProcessingRegistry())
+    doc = PptxDocument.open(output)
+    index = doc.shape_index()
+    date = index["milestone.delivery.item_1.date"].shape
+    label = index["milestone.delivery.item_1.label"].shape
+
+    assert date.text_frame.vertical_anchor == MSO_ANCHOR.MIDDLE
+    assert label.text_frame.vertical_anchor == MSO_ANCHOR.MIDDLE
 
 
 def test_milestone_supports_custom_date_width_for_full_dates():

@@ -6,7 +6,7 @@ from typing import Any
 from pptx.dml.color import RGBColor
 from pptx.enum.dml import MSO_FILL
 from pptx.enum.shapes import MSO_CONNECTOR, MSO_SHAPE
-from pptx.enum.text import PP_ALIGN
+from pptx.enum.text import MSO_ANCHOR, PP_ALIGN
 from pptx.util import Inches, Pt
 
 from report_generator.errors import ErrorCode, ReportGenerationError
@@ -316,6 +316,7 @@ def _add_centered_text(
     text_frame.margin_right = 0
     text_frame.margin_top = 0
     text_frame.margin_bottom = 0
+    text_frame.vertical_anchor = MSO_ANCHOR.MIDDLE
     paragraph = text_frame.paragraphs[0]
     paragraph.alignment = PP_ALIGN.CENTER
     run = paragraph.add_run()
