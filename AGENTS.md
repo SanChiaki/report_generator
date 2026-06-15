@@ -346,7 +346,7 @@ payload：
 
 用途：生成“TOP 问题与风险”动态卡片列表。
 
-模板：在 PPT 中放一个普通 shape 作为锚点，命名为例如 `top_issues.cards`。生成时会删除该锚点，并从锚点的 `left/top/width/height` 开始垂直绘制卡片。卡片数量按数据动态生成；超出页面空间时继续向下排布，不自动分页。
+模板：在 PPT 中放一个可见的示例卡片或普通 shape 作为预览锚点，命名为例如 `top_issues.cards`。生成时使用 `preview_mode: "replace"` 删除该预览 shape，并从它的 `left/top/width/height` 开始垂直绘制真实卡片。卡片数量按数据动态生成；超出页面空间时继续向下排布，不自动分页。
 
 数据可以是数组，也可以是包含 `items` 的对象：
 
@@ -371,6 +371,7 @@ payload：
   "location": "top_issues.cards",
   "type": "TopIssues",
   "config": {
+    "preview_mode": "replace",
     "card_height": 0.66,
     "card_gap": 0.1,
     "styles": {
@@ -389,7 +390,7 @@ payload：
 
 用途：生成动态里程碑时间轴，节点数量按数据动态增减。
 
-模板：在 PPT 中放一个普通 shape 作为锚点，命名为例如 `milestone.delivery`。生成时会删除该锚点，并在锚点区域内等距绘制连线、节点、日期和阶段名称。
+模板：在 PPT 中放一个可见的示例时间轴或普通 shape 作为预览锚点，命名为例如 `milestone.delivery`。设置 `preview_mode: "replace"` 时，生成时会删除或改名该预览锚点，并在同一区域内等距绘制真实连线、节点、日期和阶段名称。若锚点本身有填充或线条样式，会保留为 `milestone.delivery.background` 背景 shape，因此适合把黄色底色、圆角、阴影等容器样式放在这个命名锚点上。未设置 `preview_mode` 时，为兼容旧模板，默认保留锚点并清空其文字。
 
 数据可以是数组，也可以是包含 `items` 的对象：
 
@@ -411,7 +412,10 @@ payload：
   "location": "milestone.delivery",
   "type": "Milestone",
   "config": {
+    "preview_mode": "replace",
     "node_size": 0.14,
+    "date_width": 0.9,
+    "text_axis_gap": 0.09,
     "status_styles": {
       "risk": {"fill": "FFF5D6", "line": "D99A00", "text": "333333"}
     }
@@ -420,7 +424,11 @@ payload：
 }
 ```
 
-节点默认不使用 shape 描边线，避免小尺寸圆点在导出 PDF/PNG 时边缘发虚。`active` 和 `pending` 默认画成“外圆 + 内圆”的空心节点，其中外圆使用 `line` 色，内圆使用 `fill` 色；`done` 默认画成实心节点。可通过 `hollow_statuses` 指定哪些状态使用空心节点，通过 `node_inner_ratio` 控制内圆相对外圆的尺寸：
+`date_width` 控制日期文本框宽度，适合 `YYYY-MM-DD` 这类较长日期；`text_axis_gap` 控制日期文本框底部、阶段名文本框顶部到坐标轴的垂直距离，默认上下相等，避免日期和阶段名看起来不对称。
+
+日期和阶段名默认字号都是 14pt；阶段名默认字体是 `Microsoft YaHei`，可通过 `label_font_name` 覆盖。
+
+节点默认不使用 shape 描边线，避免小尺寸圆点在导出 PDF/PNG 时边缘发虚。`active` 和 `pending` 默认画成“外圆 + 内圆”的空心节点，其中外圆使用 `line` 色，内圆使用 `fill` 色；`done` 默认画成实心节点。可通过 `hollow_statuses` 指定哪些状态使用空心节点，通过 `node_inner_ratio` 控制内圆相对外圆的尺寸；如确实需要描边，可显式配置 `node_outline_width`。
 
 ```json
 {
@@ -507,23 +515,26 @@ payload：
 
 适合问题/风险卡片数量变化的页面：
 
-1. 在需要开始绘制卡片的位置放一个透明普通 shape。
-2. 将该 shape 命名为 `top_issues.cards`。
+1. 在需要开始绘制卡片的位置放一个可见示例卡片，或者放一个普通 shape。
+2. 将该预览 shape 命名为 `top_issues.cards`。
 3. mapping 使用 `TopIssues`。
-4. payload 传入 issue 数组。
+4. mapping 中设置 `config.preview_mode = "replace"`。
+5. payload 传入 issue 数组。
 
-`TopIssues` 当前是程序生成卡片，不复制模板中的复杂组合卡片；如需完全复刻 PPT 手工设计的卡片内部布局，需要后续扩展模板组复制模式。
+`TopIssues` 当前是程序生成卡片，预览 shape 只用于模板可视化和定位，不复制模板中的复杂组合卡片；如需完全复刻 PPT 手工设计的卡片内部布局，需要后续扩展模板组复制模式。
 
 ### 里程碑模板
 
 适合交付计划、项目阶段、关键节点：
 
-1. 在时间轴区域放一个透明普通 shape。
-2. 将该 shape 命名为 `milestone.delivery`。
-3. mapping 使用 `Milestone`。
-4. payload 传入里程碑数组。
+1. 在时间轴区域放一个可见容器 shape，例如黄色圆角矩形。
+2. 将该容器 shape 命名为 `milestone.delivery`，它同时负责定位和提供背景样式。
+3. 如需让用户在模板中看到示例节点，可在容器上方放示例线条、节点、日期、标签，并统一命名为 `milestone.delivery.preview.*`。
+4. mapping 使用 `Milestone`。
+5. mapping 中设置 `config.preview_mode = "replace"`。
+6. payload 传入里程碑数组。
 
-`Milestone` 当前按锚点宽度等距分布节点，不按真实日期比例定位。
+`Milestone` 当前按预览 shape 宽度等距分布节点，不按真实日期比例定位。`preview_mode: "replace"` 会删除 `milestone.delivery.preview.*` 示例元素；如果 `milestone.delivery` 有填充或线条样式，则保留并重命名为 `milestone.delivery.background`，真实节点绘制在它上方。
 
 ## 示例文件
 

@@ -34,6 +34,13 @@ def apply_top_issues(doc: PptxDocument, shape: Any, component: ComponentMapping,
         strip_width = _emu(component.config.get("strip_width"), Inches(0.08))
         severity_width = _emu(component.config.get("severity_width"), Inches(0.68))
         padding = _emu(component.config.get("padding"), Inches(0.12))
+        preview_mode = str(component.config.get("preview_mode", "replace")).strip().lower()
+        if preview_mode != "replace":
+            raise ReportGenerationError(
+                ErrorCode.DATA_SOURCE_INVALID,
+                f"组件 {component.location} 当前只支持 preview_mode=replace",
+                component,
+            )
 
         doc.remove_shape(shape)
 

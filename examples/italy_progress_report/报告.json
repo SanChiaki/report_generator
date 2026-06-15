@@ -265,27 +265,29 @@
       "location": "milestone.delivery",
       "semantic_description": "项目交付里程碑动态时间轴",
       "type": "Milestone",
-      "prompt": "提取阶段名称作为里程碑节点，同一阶段只保留一个节点；每个阶段使用最晚的实际完成时间或计划完成时间作为日期。已完成阶段 status 输出 done，进行中阶段输出 active，其余输出 pending。输出格式必须为 {\"items\":[{\"label\":\"阶段名\",\"date\":\"MM-DD\",\"status\":\"done|active|pending\"}]}。",
+      "prompt": "提取阶段名称作为里程碑节点，同一阶段只保留一个节点；每个阶段使用最晚的实际完成时间或计划完成时间作为日期，date 必须输出 YYYY-MM-DD 格式。已完成阶段 status 输出 done，进行中阶段输出 active，其余输出 pending。输出格式必须为 {\"items\":[{\"label\":\"阶段名\",\"date\":\"YYYY-MM-DD\",\"status\":\"done|active|pending\"}]}。",
       "data_example": {
         "items": [
           {
             "label": "设计",
-            "date": "06-28",
+            "date": "2026-06-28",
             "status": "active"
           },
           {
             "label": "验收",
-            "date": "07-05",
+            "date": "2026-07-05",
             "status": "pending"
           }
         ]
       },
       "config": {
+        "preview_mode": "replace",
         "node_size": 0.22,
-        "date_height": 0.24,
+        "date_height": 0.32,
         "label_height": 0.36,
-        "date_font_size": 12,
+        "date_font_size": 14,
         "label_font_size": 14,
+        "label_font_name": "Microsoft YaHei",
         "line_color": "44546A",
         "status_styles": {
           "done": {
@@ -309,16 +311,20 @@
             "text": "333333"
           }
         },
-        "preserve_anchor": true,
         "label_bold": true,
-        "line_y_ratio": 0.5,
+        "line_y_ratio": 0.56,
         "line_width": 1.5,
-        "horizontal_padding": 0.45,
+        "horizontal_padding": 0.85,
+        "date_width": 1.1,
+        "text_axis_gap": 0.08,
         "date_color": "C00000"
       },
       "data_source": {
-        "index": "$['全量数据']['项目阶段']",
-        "needs_post_processing": true
+        "name": "general_project_milestones",
+        "needs_post_processing": true,
+        "params": {
+          "sr_api_data": "sr_api_data"
+        }
       }
     },
     {
@@ -340,6 +346,7 @@
         ]
       },
       "config": {
+        "preview_mode": "replace",
         "card_gap": 0.12,
         "strip_width": 0.08,
         "severity_width": 0.7,

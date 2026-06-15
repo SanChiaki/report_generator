@@ -4,6 +4,7 @@ from collections.abc import Mapping
 from typing import Any
 
 from pptx.dml.color import RGBColor
+from pptx.enum.dml import MSO_FILL
 from pptx.enum.shapes import MSO_CONNECTOR, MSO_SHAPE
 from pptx.enum.text import PP_ALIGN
 from pptx.util import Inches, Pt
@@ -30,8 +31,21 @@ def apply_milestone(doc: PptxDocument, shape: Any, component: ComponentMapping, 
         top = shape.top
         width = shape.width
         height = shape.height
-        preserve_anchor = bool(component.config.get("preserve_anchor", True))
-        if preserve_anchor:
+        background_style = _extract_background_style(shape)
+        preview_mode = str(component.config.get("preview_mode", "")).strip().lower()
+        if preview_mode == "replace":
+            _remove_preview_parts(doc, slide, component.location)
+            if background_style:
+                _promote_anchor_to_background(shape, component.location)
+            else:
+                doc.remove_shape(shape)
+        elif preview_mode:
+            raise ReportGenerationError(
+                ErrorCode.DATA_SOURCE_INVALID,
+                f"组件 {component.location} 当前只支持 preview_mode=replace",
+                component,
+            )
+        elif bool(component.config.get("preserve_anchor", True)):
             _clear_shape_text(shape)
         else:
             doc.remove_shape(shape)
@@ -42,16 +56,22 @@ def apply_milestone(doc: PptxDocument, shape: Any, component: ComponentMapping, 
         line_y = top + int(height * float(component.config.get("line_y_ratio", 0.46)))
         date_height = _emu(component.config.get("date_height"), Inches(0.22))
         label_height = _emu(component.config.get("label_height"), Inches(0.24))
-        font_size = int(component.config.get("font_size", 12))
+        font_size = int(component.config.get("font_size", 14))
         date_font_size = int(component.config.get("date_font_size", font_size))
         label_font_size = int(component.config.get("label_font_size", 14))
+        date_font_name = str(component.config.get("date_font_name", component.config.get("font_name", "")))
+        label_font_name = str(component.config.get("label_font_name", component.config.get("font_name", "Microsoft YaHei")))
         label_bold = bool(component.config.get("label_bold", True))
         node_inner_ratio = float(component.config.get("node_inner_ratio", 0.52))
+        node_outline_width = float(component.config.get("node_outline_width", 0))
+        default_text_axis_gap = node_size * 0.65 / Inches(1)
+        text_axis_gap = _emu(component.config.get("text_axis_gap", default_text_axis_gap), int(node_size * 0.65))
         horizontal_padding = _emu(component.config.get("horizontal_padding"), 0)
         timeline_left = left + horizontal_padding
         timeline_width = max(1, width - horizontal_padding * 2)
         centers = _node_centers(timeline_left, timeline_width, len(items))
         text_slot_width = int(timeline_width / max(len(items), 1))
+        date_width = min(width, _emu(component.config.get("date_width"), text_slot_width))
 
         if len(centers) > 1:
             line = slide.shapes.add_connector(MSO_CONNECTOR.STRAIGHT, centers[0], line_y, centers[-1], line_y)
@@ -66,12 +86,13 @@ def apply_milestone(doc: PptxDocument, shape: Any, component: ComponentMapping, 
                 slide,
                 f"{component.location}.item_{index}.date",
                 str(item.get("date", "")),
-                _centered_left(center_x, text_slot_width),
-                max(top, line_y - node_size - date_height),
-                text_slot_width,
+                _centered_left(center_x, date_width),
+                max(top, line_y - text_axis_gap - date_height),
+                date_width,
                 date_height,
                 date_font_size,
                 str(component.config.get("date_color", styles["text"])),
+                date_font_name,
             )
             _add_node(
                 slide,
@@ -82,18 +103,20 @@ def apply_milestone(doc: PptxDocument, shape: Any, component: ComponentMapping, 
                 styles,
                 hollow=_is_hollow_node(component, item, styles),
                 inner_ratio=node_inner_ratio,
+                outline_width=node_outline_width,
             )
             _add_label(
                 slide,
                 f"{component.location}.item_{index}.label",
                 str(item.get("label", "")),
                 _centered_left(center_x, text_slot_width),
-                line_y + int(node_size * 0.65),
+                line_y + text_axis_gap,
                 text_slot_width,
                 label_height,
                 label_font_size,
                 styles["text"],
                 label_bold,
+                label_font_name,
             )
     except ReportGenerationError:
         raise
@@ -139,6 +162,33 @@ def _clear_shape_text(shape: Any) -> None:
             run.text = ""
 
 
+def _extract_background_style(shape: Any) -> dict[str, Any]:
+    style: dict[str, Any] = {}
+    try:
+        if shape.fill.type == MSO_FILL.SOLID:
+            style["fill"] = True
+    except (AttributeError, TypeError):
+        pass
+    try:
+        if shape.line.fill.type == MSO_FILL.SOLID:
+            style["line"] = True
+    except (AttributeError, TypeError):
+        pass
+    return style
+
+
+def _promote_anchor_to_background(shape: Any, component_location: str) -> None:
+    shape.name = f"{component_location}.background"
+    _clear_shape_text(shape)
+
+
+def _remove_preview_parts(doc: PptxDocument, slide: Any, component_location: str) -> None:
+    preview_prefix = f"{component_location}.preview."
+    for preview_shape in list(slide.shapes):
+        if str(getattr(preview_shape, "name", "")).startswith(preview_prefix):
+            doc.remove_shape(preview_shape)
+
+
 def _node_centers(left: int, width: int, count: int) -> list[int]:
     if count == 1:
         return [left + int(width / 2)]
@@ -180,24 +230,36 @@ def _add_node(
     *,
     hollow: bool,
     inner_ratio: float,
+    outline_width: float,
 ) -> None:
     node_fill = str(styles["line"] if hollow else styles["fill"])
-    node = _add_filled_circle(slide, name, left, top, size, node_fill)
+    node = _add_filled_circle(slide, name, left, top, size, node_fill, outline_width=outline_width)
     if not hollow:
         return
 
     inner_size = _same_parity(max(1, int(size * max(0.1, min(inner_ratio, 0.9)))), size)
     inner_left = int(left + (size - inner_size) / 2)
     inner_top = int(top + (size - inner_size) / 2)
-    _add_filled_circle(slide, f"{name}.inner", inner_left, inner_top, inner_size, str(styles["fill"]))
+    _add_filled_circle(slide, f"{name}.inner", inner_left, inner_top, inner_size, str(styles["fill"]), outline_width=outline_width)
 
 
-def _add_filled_circle(slide: Any, name: str, left: int, top: int, size: int, color: str) -> Any:
+def _add_filled_circle(
+    slide: Any,
+    name: str,
+    left: int,
+    top: int,
+    size: int,
+    color: str,
+    *,
+    outline_width: float,
+) -> Any:
     node = slide.shapes.add_shape(MSO_SHAPE.OVAL, left, top, size, size)
     node.name = name
     node.fill.solid()
     node.fill.fore_color.rgb = _rgb(color)
-    node.line.width = Pt(0)
+    if outline_width > 0:
+        node.line.color.rgb = _rgb(color)
+    node.line.width = Pt(outline_width)
     return node
 
 
@@ -211,8 +273,9 @@ def _add_date(
     height: int,
     font_size: int,
     color: str,
+    font_name: str,
 ) -> None:
-    _add_centered_text(slide, name, text, left, top, width, height, font_size, color, bold=True)
+    _add_centered_text(slide, name, text, left, top, width, height, font_size, color, font_name=font_name, bold=True)
 
 
 def _add_label(
@@ -226,8 +289,9 @@ def _add_label(
     font_size: int,
     color: str,
     bold: bool,
+    font_name: str,
 ) -> None:
-    _add_centered_text(slide, name, text, left, top, width, height, font_size, color, bold=bold)
+    _add_centered_text(slide, name, text, left, top, width, height, font_size, color, font_name=font_name, bold=bold)
 
 
 def _add_centered_text(
@@ -241,6 +305,7 @@ def _add_centered_text(
     font_size: int,
     color: str,
     *,
+    font_name: str,
     bold: bool,
 ) -> None:
     textbox = slide.shapes.add_textbox(left, top, width, height)
@@ -257,6 +322,8 @@ def _add_centered_text(
     run.text = text
     run.font.size = Pt(font_size)
     run.font.bold = bold
+    if font_name:
+        run.font.name = font_name
     run.font.color.rgb = _rgb(color)
 
 

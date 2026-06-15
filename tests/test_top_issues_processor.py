@@ -98,6 +98,29 @@ def test_top_issues_draws_dynamic_vertical_cards_with_severity_styles():
     assert cards[3].shape.top > cards[2].shape.top
 
 
+def test_top_issues_preview_mode_replace_removes_template_preview_shape():
+    mapping = {
+        "template_id": "top-issues-test",
+        "component_list": [
+            {
+                "location": "top_issues.cards",
+                "semantic_description": "TOP 问题与风险",
+                "type": "TopIssues",
+                "config": {"preview_mode": "replace"},
+                "data_source": {"name": "issues"},
+            }
+        ],
+    }
+    payload = {"issues": [{"severity": "紧急", "description": "验收窗口未确认"}]}
+
+    output = generate_report(_template_bytes(), mapping, payload, PostProcessingRegistry())
+    doc = PptxDocument.open(output)
+    index = doc.shape_index()
+
+    assert "top_issues.cards" not in index
+    assert index["top_issues.cards.item_1.description"].shape.text == "问题描述：验收窗口未确认"
+
+
 def test_top_issues_accepts_items_object_and_custom_templates():
     mapping = {
         "template_id": "top-issues-test",

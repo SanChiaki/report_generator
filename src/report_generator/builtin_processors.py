@@ -23,6 +23,7 @@ SEVERITY_ORDER = {"紧急": 0, "重要": 1, "一般": 2}
 def default_registry() -> PostProcessingRegistry:
     registry = PostProcessingRegistry()
     registry.register("general_project_delivery_plan", general_project_delivery_plan)
+    registry.register("general_project_milestones", general_project_milestones)
     registry.register("general_stage_task_details", general_project_delivery_plan)
     registry.register("general_top_risks_and_issues", general_top_risks_and_issues)
     registry.register("general_top_risks_and_issues_v2", general_top_risks_and_issues_v2)
@@ -32,6 +33,24 @@ def default_registry() -> PostProcessingRegistry:
 def general_project_delivery_plan(sr_api_data: Mapping[str, Any]) -> list[dict[str, Any]]:
     rows = _project_stages(sr_api_data, prefer_period=False)
     return [{column: _text(row.get(column)) for column in TASK_COLUMNS} for row in rows]
+
+
+def general_project_milestones(sr_api_data: Mapping[str, Any]) -> dict[str, list[dict[str, str]]]:
+    stages: dict[str, dict[str, Any]] = {}
+    for row in _project_stages(sr_api_data, prefer_period=False):
+        label = _text(row.get("阶段名称"))
+        if not label:
+            continue
+        item = stages.setdefault(label, {"label": label, "date": "", "status_rank": 0})
+        item["date"] = max(str(item["date"]), _stage_date(row))
+        item["status_rank"] = max(int(item["status_rank"]), _stage_status_rank(row.get("任务状态")))
+    return {
+        "items": [
+            {"label": str(item["label"]), "date": str(item["date"]), "status": _stage_status(item["status_rank"])}
+            for item in stages.values()
+            if str(item["date"])
+        ]
+    }
 
 
 def general_top_risks_and_issues(sr_api_data: Mapping[str, Any]) -> list[dict[str, Any]]:
@@ -94,6 +113,27 @@ def _normalize_severity(value: Any) -> str:
     if severity in SEVERITY_ORDER:
         return severity
     return "一般"
+
+
+def _stage_date(row: Mapping[str, Any]) -> str:
+    return _date_only(row.get("实际完成时间")) or _date_only(row.get("计划完成时间"))
+
+
+def _stage_status_rank(value: Any) -> int:
+    status = _text(value)
+    if status in {"已完成", "完成", "已结束", "结束"}:
+        return 1
+    if status in {"进行中", "处理中", "执行中"}:
+        return 2
+    return 0
+
+
+def _stage_status(rank: Any) -> str:
+    if rank == 2:
+        return "active"
+    if rank == 1:
+        return "done"
+    return "pending"
 
 
 def _nested_list(data: Mapping[str, Any], section: str, key: str) -> list[Any]:
