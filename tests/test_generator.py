@@ -38,6 +38,13 @@ class BlockingComponentProcessor:
         return f"{component.location}:{value}"
 
 
+class SelectiveFailingComponentProcessor:
+    def process(self, component, value):
+        if component.location == "text.report_title":
+            raise ReportGenerationError(ErrorCode.POST_PROCESSING_FAILED, "后处理失败", component)
+        return f"{component.location}:{value}"
+
+
 def test_generate_report_populates_text_and_table(simple_template_bytes):
     mapping = {
         "template_id": "project-monthly-report-ppt-v1",
@@ -147,6 +154,78 @@ def test_generate_report_processes_post_processing_components_in_parallel(simple
     assert processor.max_active == 2
     assert doc.shape_index()["text.report_title"].shape.text_frame.text == "text.report_title:标题原始数据"
     assert doc.shape_index()["text.summary"].shape.text_frame.text == "text.summary:摘要原始数据"
+
+
+def test_generate_report_skips_component_update_when_data_source_missing(simple_template_bytes):
+    mapping = {
+        "template_id": "project-monthly-report-ppt-v1",
+        "component_list": [
+            {
+                "location": "text.report_title",
+                "semantic_description": "报告标题",
+                "type": "Text",
+                "data_source": {"name": "missing_title"},
+            },
+            {
+                "location": "text.summary",
+                "semantic_description": "摘要",
+                "type": "Text",
+                "data_source": {"name": "summary"},
+            },
+        ],
+    }
+
+    output = generate_report(
+        simple_template_bytes,
+        mapping,
+        {"summary": "新的摘要"},
+        PostProcessingRegistry(),
+    )
+    doc = PptxDocument.open(output)
+    index = doc.shape_index()
+
+    assert index["text.report_title"].shape.text_frame.text == "旧标题"
+    assert index["text.summary"].shape.text_frame.text == "新的摘要"
+
+
+def test_generate_report_skips_failed_post_processing_component_and_updates_others(simple_template_bytes):
+    mapping = {
+        "template_id": "project-monthly-report-ppt-v1",
+        "component_list": [
+            {
+                "location": "text.report_title",
+                "semantic_description": "报告标题",
+                "type": "Text",
+                "data_source": {
+                    "name": "title",
+                    "needs_post_processing": True,
+                },
+            },
+            {
+                "location": "text.summary",
+                "semantic_description": "摘要",
+                "type": "Text",
+                "data_source": {
+                    "name": "summary",
+                    "needs_post_processing": True,
+                },
+            },
+        ],
+    }
+
+    output = generate_report(
+        simple_template_bytes,
+        mapping,
+        {"title": "标题原始数据", "summary": "摘要原始数据"},
+        PostProcessingRegistry(),
+        SelectiveFailingComponentProcessor(),
+        llm_concurrency=2,
+    )
+    doc = PptxDocument.open(output)
+    index = doc.shape_index()
+
+    assert index["text.report_title"].shape.text_frame.text == "旧标题"
+    assert index["text.summary"].shape.text_frame.text == "text.summary:摘要原始数据"
 
 
 def test_generate_report_feeds_registered_function_result_to_llm_when_post_processing_enabled(simple_template_bytes):

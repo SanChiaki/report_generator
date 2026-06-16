@@ -20,6 +20,9 @@ from report_generator.post_processing import PostProcessingRegistry
 from report_generator.pptx.document import PptxDocument, ShapeRef
 
 
+SKIPPED_COMPONENT_VALUE = object()
+
+
 def generate_report(
     template_bytes: bytes,
     mapping_payload: dict[str, Any],
@@ -44,6 +47,8 @@ def generate_report(
         if component.visible is False:
             doc.remove_shape(ref.shape)
             index = doc.shape_index(required_names=required_names)
+            continue
+        if value is SKIPPED_COMPONENT_VALUE:
             continue
         _apply_component(doc, ref, component, value)
         index = doc.shape_index(required_names=required_names)
@@ -70,7 +75,7 @@ def _resolve_component_values(
     for index, component in enumerate(components):
         if index in post_processing_indexes or component.visible is False:
             continue
-        values[index] = resolve_component_value(component, business_payload, registry, processor)
+        values[index] = _resolve_component_value_or_skip(component, business_payload, registry, processor)
 
     if not post_processing_indexes:
         return values
@@ -87,9 +92,40 @@ def _resolve_component_values(
             for index in post_processing_indexes
         }
         for future, index in futures.items():
-            values[index] = future.result()
+            values[index] = _future_result_or_skip(future)
 
     return values
+
+
+def _resolve_component_value_or_skip(
+    component: ComponentMapping,
+    business_payload: dict[str, Any],
+    registry: PostProcessingRegistry,
+    processor: ComponentDataProcessor,
+) -> Any:
+    try:
+        return resolve_component_value(component, business_payload, registry, processor)
+    except ReportGenerationError as exc:
+        if _should_skip_component_for_value_error(exc):
+            return SKIPPED_COMPONENT_VALUE
+        raise
+
+
+def _future_result_or_skip(future: Any) -> Any:
+    try:
+        return future.result()
+    except ReportGenerationError as exc:
+        if _should_skip_component_for_value_error(exc):
+            return SKIPPED_COMPONENT_VALUE
+        raise
+
+
+def _should_skip_component_for_value_error(exc: ReportGenerationError) -> bool:
+    return exc.error_code in {
+        ErrorCode.DATA_SOURCE_NOT_FOUND,
+        ErrorCode.DATA_SOURCE_INVALID,
+        ErrorCode.POST_PROCESSING_FAILED,
+    }
 
 
 def _resolve_llm_concurrency(value: int | None) -> int:
