@@ -1,3 +1,4 @@
+import logging
 import pytest
 import time
 from threading import Lock
@@ -156,7 +157,7 @@ def test_generate_report_processes_post_processing_components_in_parallel(simple
     assert doc.shape_index()["text.summary"].shape.text_frame.text == "text.summary:摘要原始数据"
 
 
-def test_generate_report_skips_component_update_when_data_source_missing(simple_template_bytes):
+def test_generate_report_skips_component_update_when_data_source_missing(simple_template_bytes, caplog):
     mapping = {
         "template_id": "project-monthly-report-ppt-v1",
         "component_list": [
@@ -175,20 +176,25 @@ def test_generate_report_skips_component_update_when_data_source_missing(simple_
         ],
     }
 
-    output = generate_report(
-        simple_template_bytes,
-        mapping,
-        {"summary": "新的摘要"},
-        PostProcessingRegistry(),
-    )
+    with caplog.at_level(logging.WARNING, logger="report_generator.generator"):
+        output = generate_report(
+            simple_template_bytes,
+            mapping,
+            {"summary": "新的摘要"},
+            PostProcessingRegistry(),
+        )
     doc = PptxDocument.open(output)
     index = doc.shape_index()
 
     assert index["text.report_title"].shape.text_frame.text == "旧标题"
     assert index["text.summary"].shape.text_frame.text == "新的摘要"
+    assert "Skip component update because data source resolution failed" in caplog.text
+    assert "location=text.report_title" in caplog.text
+    assert "type=Text" in caplog.text
+    assert "error_code=DATA_SOURCE_INVALID" in caplog.text
 
 
-def test_generate_report_skips_failed_post_processing_component_and_updates_others(simple_template_bytes):
+def test_generate_report_skips_failed_post_processing_component_and_updates_others(simple_template_bytes, caplog):
     mapping = {
         "template_id": "project-monthly-report-ppt-v1",
         "component_list": [
@@ -213,19 +219,24 @@ def test_generate_report_skips_failed_post_processing_component_and_updates_othe
         ],
     }
 
-    output = generate_report(
-        simple_template_bytes,
-        mapping,
-        {"title": "标题原始数据", "summary": "摘要原始数据"},
-        PostProcessingRegistry(),
-        SelectiveFailingComponentProcessor(),
-        llm_concurrency=2,
-    )
+    with caplog.at_level(logging.WARNING, logger="report_generator.generator"):
+        output = generate_report(
+            simple_template_bytes,
+            mapping,
+            {"title": "标题原始数据", "summary": "摘要原始数据"},
+            PostProcessingRegistry(),
+            SelectiveFailingComponentProcessor(),
+            llm_concurrency=2,
+        )
     doc = PptxDocument.open(output)
     index = doc.shape_index()
 
     assert index["text.report_title"].shape.text_frame.text == "旧标题"
     assert index["text.summary"].shape.text_frame.text == "text.summary:摘要原始数据"
+    assert "Skip component update because data source resolution failed" in caplog.text
+    assert "location=text.report_title" in caplog.text
+    assert "type=Text" in caplog.text
+    assert "error_code=POST_PROCESSING_FAILED" in caplog.text
 
 
 def test_generate_report_feeds_registered_function_result_to_llm_when_post_processing_enabled(simple_template_bytes):

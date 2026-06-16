@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import logging
 import os
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any
@@ -20,6 +21,7 @@ from report_generator.post_processing import PostProcessingRegistry
 from report_generator.pptx.document import PptxDocument, ShapeRef
 
 
+logger = logging.getLogger(__name__)
 SKIPPED_COMPONENT_VALUE = object()
 
 
@@ -107,6 +109,7 @@ def _resolve_component_value_or_skip(
         return resolve_component_value(component, business_payload, registry, processor)
     except ReportGenerationError as exc:
         if _should_skip_component_for_value_error(exc):
+            _log_skipped_component_value(exc)
             return SKIPPED_COMPONENT_VALUE
         raise
 
@@ -116,8 +119,21 @@ def _future_result_or_skip(future: Any) -> Any:
         return future.result()
     except ReportGenerationError as exc:
         if _should_skip_component_for_value_error(exc):
+            _log_skipped_component_value(exc)
             return SKIPPED_COMPONENT_VALUE
         raise
+
+
+def _log_skipped_component_value(exc: ReportGenerationError) -> None:
+    location = exc.component.location if exc.component else ""
+    component_type = exc.component.type if exc.component else ""
+    logger.warning(
+        "Skip component update because data source resolution failed: location=%s type=%s error_code=%s message=%s",
+        location,
+        component_type,
+        exc.error_code.value,
+        exc.message,
+    )
 
 
 def _should_skip_component_for_value_error(exc: ReportGenerationError) -> bool:
