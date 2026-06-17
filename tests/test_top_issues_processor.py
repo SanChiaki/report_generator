@@ -253,6 +253,49 @@ def test_top_issues_uses_template_like_default_font_sizes():
     assert meta_run.font.size.pt == 12
 
 
+def test_top_issues_uses_microsoft_yahei_for_all_generated_text():
+    mapping = {
+        "template_id": "top-issues-test",
+        "component_list": [
+            {
+                "location": "top_issues.cards",
+                "semantic_description": "TOP 问题与风险",
+                "type": "TopIssues",
+                "data_source": {"name": "issues"},
+            }
+        ],
+    }
+    payload = {
+        "issues": [
+            {
+                "severity": "紧急",
+                "description": "验收窗口未确认",
+                "action": "协调客户确认备选时间",
+                "owner": "Owner A",
+                "status": "tracking",
+                "due_date": "2026-06-14",
+            }
+        ]
+    }
+
+    output = generate_report(_template_bytes(), mapping, payload, PostProcessingRegistry())
+    doc = PptxDocument.open(output)
+    index = doc.shape_index()
+    runs = [
+        index["top_issues.cards.item_1.severity"].shape.text_frame.paragraphs[0].runs[0],
+        *index["top_issues.cards.item_1.description"].shape.text_frame.paragraphs[0].runs,
+        *index["top_issues.cards.item_1.action"].shape.text_frame.paragraphs[0].runs,
+        index["top_issues.cards.item_1.meta"].shape.text_frame.paragraphs[0].runs[0],
+    ]
+
+    for run in runs:
+        assert _typefaces(run) == {
+            "latin": "Microsoft YaHei",
+            "ea": "Microsoft YaHei",
+            "cs": "Microsoft YaHei",
+        }
+
+
 def test_top_issues_styles_description_and_action_labels_separately_from_values():
     mapping = {
         "template_id": "top-issues-test",
@@ -325,3 +368,13 @@ def test_top_issues_treats_numeric_dimensions_as_inches():
 
     assert first.height == Inches(1)
     assert second.top - first.top == Inches(1.25)
+
+
+def _typefaces(run):
+    r_pr = run._r.rPr
+    values = {}
+    for child in r_pr:
+        tag = child.tag
+        if tag.endswith(("}latin", "}ea", "}cs")):
+            values[tag.split("}", 1)[1]] = child.get("typeface")
+    return values

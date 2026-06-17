@@ -12,6 +12,7 @@ from pptx.util import Inches, Pt
 from report_generator.errors import ErrorCode, ReportGenerationError
 from report_generator.models import ComponentMapping
 from report_generator.pptx.document import PptxDocument
+from report_generator.pptx.text import set_run_typeface
 
 
 DEFAULT_STATUS_STYLES: dict[str, dict[str, str]] = {
@@ -59,7 +60,7 @@ def apply_milestone(doc: PptxDocument, shape: Any, component: ComponentMapping, 
         font_size = int(component.config.get("font_size", 14))
         date_font_size = int(component.config.get("date_font_size", font_size))
         label_font_size = int(component.config.get("label_font_size", 14))
-        date_font_name = str(component.config.get("date_font_name", component.config.get("font_name", "")))
+        date_font_name = str(component.config.get("date_font_name", component.config.get("font_name", "Microsoft YaHei")))
         label_font_name = str(component.config.get("label_font_name", component.config.get("font_name", "Microsoft YaHei")))
         label_bold = bool(component.config.get("label_bold", True))
         node_inner_ratio = float(component.config.get("node_inner_ratio", 0.52))
@@ -324,7 +325,7 @@ def _add_centered_text(
     run.font.size = Pt(font_size)
     run.font.bold = bold
     if font_name:
-        run.font.name = font_name
+        set_run_typeface(run, font_name)
     run.font.color.rgb = _rgb(color)
 
 

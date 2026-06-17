@@ -193,9 +193,9 @@ output_bytes = generate_report(template_bytes, mapping_json, payload_json)
 
 常用配置：
 
-- `preserve_style: true`: 保留原 run 样式，仅替换文本。若原字号放不下新文本，会报 `TEXT_OVERFLOW`。
+- `preserve_style: true`: 保留原 run 样式，仅替换文本。若原高度放不下新文本，会保持宽度不变并向下扩展文本框高度。
 - `font_size`: 未保留样式时的起始字号。
-- `min_font_size`: 自动缩小字号时的最小字号。
+- `min_font_size`: 自动缩小字号时的最小字号；若最小字号仍放不下，会保持宽度不变并向下扩展文本框高度。
 
 建议：模板文本组件默认使用 `preserve_style: true`，让字号、颜色、粗细由模板决定。
 
@@ -409,6 +409,8 @@ payload：
 
 默认情况下，`问题描述：`、`解决措施与进展：` 标签使用蓝色粗体，标签后的具体内容使用黑色常规字重。`description_color`、`action_color` 兼容作为标签颜色；也可用 `description_label_color`、`description_value_color`、`action_label_color`、`action_value_color` 分别配置标签和内容颜色。
 
+生成文本默认使用 `Microsoft YaHei`，并同时写入 latin/eastAsia/complexScript 字体声明，避免数字和英文回退到 Arial。可通过 `font_name` 统一覆盖，也可用 `severity_font_name`、`description_font_name`、`action_font_name`、`meta_font_name` 分别覆盖。
+
 可配置 `description_template`、`action_template`、`meta_template` 自定义卡片文本。模板上下文就是单条 issue 对象。
 
 ### Milestone
@@ -451,7 +453,7 @@ payload：
 
 `date_width` 控制日期文本框宽度，适合 `YYYY-MM-DD` 这类较长日期；`text_axis_gap` 控制日期文本框底部、阶段名文本框顶部到坐标轴的垂直距离，默认上下相等，避免日期和阶段名看起来不对称。
 
-日期和阶段名默认字号都是 14pt；阶段名默认字体是 `Microsoft YaHei`，可通过 `label_font_name` 覆盖。
+日期和阶段名默认字号都是 14pt，默认字体都是 `Microsoft YaHei`，并同时写入 latin/eastAsia/complexScript 字体声明，避免数字和英文回退到 Arial。可通过 `font_name` 统一覆盖，也可通过 `date_font_name`、`label_font_name` 分别覆盖。
 
 节点默认不使用 shape 描边线，避免小尺寸圆点在导出 PDF/PNG 时边缘发虚。`active` 和 `pending` 默认画成“外圆 + 内圆”的空心节点，其中外圆使用 `line` 色，内圆使用 `fill` 色；`done` 默认画成实心节点。可通过 `hollow_statuses` 指定哪些状态使用空心节点，通过 `node_inner_ratio` 控制内圆相对外圆的尺寸；如确实需要描边，可显式配置 `node_outline_width`。
 
@@ -480,7 +482,7 @@ payload：
 
 ### 文本模板
 
-文本框先放一段示例文本，设置好字号、颜色、粗细和位置。mapping 中使用 `Text` + `preserve_style: true`。
+文本框先放一段示例文本，设置好字号、颜色、粗细和位置。mapping 中使用 `Text` + `preserve_style: true`。替换后的文本会保持宽度不变；当内容变长时，文本框会向下自然扩高。
 
 ```json
 {

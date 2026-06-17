@@ -237,8 +237,17 @@ def test_milestone_uses_readable_default_text_sizes_and_label_font():
     label_run = index["milestone.delivery.item_1.label"].shape.text_frame.paragraphs[0].runs[0]
 
     assert date_run.font.size.pt == 14
+    assert _typefaces(date_run) == {
+        "latin": "Microsoft YaHei",
+        "ea": "Microsoft YaHei",
+        "cs": "Microsoft YaHei",
+    }
     assert label_run.font.size.pt == 14
-    assert label_run.font.name == "Microsoft YaHei"
+    assert _typefaces(label_run) == {
+        "latin": "Microsoft YaHei",
+        "ea": "Microsoft YaHei",
+        "cs": "Microsoft YaHei",
+    }
     assert label_run.font.bold is True
 
 
@@ -484,3 +493,13 @@ def test_milestone_keeps_date_and_label_equally_spaced_from_axis():
 
     assert axis_y - (date.top + date.height) == Inches(0.14)
     assert label.top - axis_y == Inches(0.14)
+
+
+def _typefaces(run):
+    r_pr = run._r.rPr
+    values = {}
+    for child in r_pr:
+        tag = child.tag
+        if tag.endswith(("}latin", "}ea", "}cs")):
+            values[tag.split("}", 1)[1]] = child.get("typeface")
+    return values

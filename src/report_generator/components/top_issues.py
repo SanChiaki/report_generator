@@ -13,6 +13,7 @@ from pptx.util import Inches, Pt
 from report_generator.errors import ErrorCode, ReportGenerationError
 from report_generator.models import ComponentMapping
 from report_generator.pptx.document import PptxDocument
+from report_generator.pptx.text import set_run_typeface
 
 
 DEFAULT_STYLES: dict[str, dict[str, str]] = {
@@ -34,6 +35,7 @@ def apply_top_issues(doc: PptxDocument, shape: Any, component: ComponentMapping,
         strip_width = _emu(component.config.get("strip_width"), Inches(0.08))
         severity_width = _emu(component.config.get("severity_width"), Inches(0.68))
         padding = _emu(component.config.get("padding"), Inches(0.12))
+        font_name = str(component.config.get("font_name", "Microsoft YaHei"))
         preview_mode = str(component.config.get("preview_mode", "replace")).strip().lower()
         if preview_mode != "replace":
             raise ReportGenerationError(
@@ -61,6 +63,7 @@ def apply_top_issues(doc: PptxDocument, shape: Any, component: ComponentMapping,
                 font_size=int(component.config.get("severity_font_size", 18)),
                 bold=True,
                 color=styles["accent"],
+                font_name=str(component.config.get("severity_font_name", font_name)),
             )
 
             text_left = left + strip_width + padding + severity_width
@@ -76,6 +79,7 @@ def apply_top_issues(doc: PptxDocument, shape: Any, component: ComponentMapping,
                 font_size=int(component.config.get("description_font_size", 13)),
                 label_color=str(component.config.get("description_label_color", component.config.get("description_color", "0B63CE"))),
                 value_color=str(component.config.get("description_value_color", "333333")),
+                font_name=str(component.config.get("description_font_name", font_name)),
                 label_prefixes=("问题描述：", "问题描述:"),
             )
             _add_labeled_text(
@@ -89,6 +93,7 @@ def apply_top_issues(doc: PptxDocument, shape: Any, component: ComponentMapping,
                 font_size=int(component.config.get("action_font_size", 13)),
                 label_color=str(component.config.get("action_label_color", component.config.get("action_color", "0B63CE"))),
                 value_color=str(component.config.get("action_value_color", "333333")),
+                font_name=str(component.config.get("action_font_name", font_name)),
                 label_prefixes=("解决措施与进展：", "解决措施与进展:"),
             )
             _add_text(
@@ -102,6 +107,7 @@ def apply_top_issues(doc: PptxDocument, shape: Any, component: ComponentMapping,
                 font_size=int(component.config.get("meta_font_size", 12)),
                 bold=False,
                 color=str(component.config.get("meta_color", "222222")),
+                font_name=str(component.config.get("meta_font_name", font_name)),
             )
     except ReportGenerationError:
         raise
@@ -207,6 +213,7 @@ def _add_text(
     font_size: int,
     bold: bool,
     color: str,
+    font_name: str,
 ) -> None:
     textbox = slide.shapes.add_textbox(left, top, width, height)
     textbox.name = name
@@ -221,6 +228,7 @@ def _add_text(
     run.text = text
     run.font.size = Pt(font_size)
     run.font.bold = bold
+    set_run_typeface(run, font_name)
     run.font.color.rgb = _rgb(color)
 
 
@@ -236,6 +244,7 @@ def _add_labeled_text(
     font_size: int,
     label_color: str,
     value_color: str,
+    font_name: str,
     label_prefixes: tuple[str, ...],
 ) -> None:
     textbox = slide.shapes.add_textbox(left, top, width, height)
@@ -248,16 +257,17 @@ def _add_labeled_text(
     text_frame.margin_bottom = 0
     paragraph = text_frame.paragraphs[0]
     label, value = _split_labeled_text(text, label_prefixes)
-    _add_run(paragraph, label, font_size=font_size, bold=True, color=label_color)
+    _add_run(paragraph, label, font_size=font_size, bold=True, color=label_color, font_name=font_name)
     if value:
-        _add_run(paragraph, value, font_size=font_size, bold=False, color=value_color)
+        _add_run(paragraph, value, font_size=font_size, bold=False, color=value_color, font_name=font_name)
 
 
-def _add_run(paragraph: Any, text: str, *, font_size: int, bold: bool, color: str) -> None:
+def _add_run(paragraph: Any, text: str, *, font_size: int, bold: bool, color: str, font_name: str) -> None:
     run = paragraph.add_run()
     run.text = text
     run.font.size = Pt(font_size)
     run.font.bold = bold
+    set_run_typeface(run, font_name)
     run.font.color.rgb = _rgb(color)
 
 

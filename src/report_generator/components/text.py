@@ -27,11 +27,7 @@ def apply_text(shape: Any, component: ComponentMapping, value: Any) -> None:
     start_font_size = _existing_font_size(shape) or int(component.config.get("font_size", 18))
     if component.config.get("preserve_style"):
         if not _fits(shape, text, start_font_size):
-            raise ReportGenerationError(
-                ErrorCode.TEXT_OVERFLOW,
-                f"组件 {component.location} 的文本在模板原始字号 {start_font_size} 下无法放入模板区域",
-                component,
-            )
+            shape.height = _required_height(shape, text, start_font_size)
         if rich_text is not None:
             _apply_rich_text(shape, rich_text, preserve_style=True)
             return
@@ -40,11 +36,8 @@ def apply_text(shape: Any, component: ComponentMapping, value: Any) -> None:
 
     fitted_font_size = _fit_font_size(shape, text, start_font_size, min_font_size)
     if fitted_font_size is None:
-        raise ReportGenerationError(
-            ErrorCode.TEXT_OVERFLOW,
-            f"组件 {component.location} 的文本在最小字号 {min_font_size} 下仍无法放入模板区域",
-            component,
-        )
+        fitted_font_size = min_font_size
+        shape.height = _required_height(shape, text, fitted_font_size)
 
     if rich_text is not None:
         _apply_rich_text(shape, rich_text, default_font_size=fitted_font_size)
@@ -162,16 +155,35 @@ def _fit_font_size(shape: Any, text: str, start: int, minimum: int) -> int | Non
 
 
 def _fits(shape: Any, text: str, font_size: int) -> bool:
-    width_in = max(shape.width / EMU_PER_INCH, 0.1)
     height_in = max(shape.height / EMU_PER_INCH, 0.1)
-    chars_per_line = max(1, int((width_in * 72) / (font_size * 0.55)))
+    needed_lines = _needed_line_count(shape, text, font_size)
+    line_height_in = _line_height_in(font_size)
+    capacity = max(1, math.floor(height_in / line_height_in))
+    return needed_lines <= capacity
+
+
+def _required_height(shape: Any, text: str, font_size: int) -> int:
+    needed_lines = _needed_line_count(shape, text, font_size)
+    line_height_in = _line_height_in(font_size)
+    return max(shape.height, int(math.ceil(needed_lines * line_height_in * EMU_PER_INCH)))
+
+
+def _needed_line_count(shape: Any, text: str, font_size: int) -> int:
+    chars_per_line = _chars_per_line(shape, font_size)
     source_lines = text.splitlines() or [""]
     needed_lines = 0
     for line in source_lines:
         needed_lines += max(1, math.ceil(len(line) / chars_per_line))
-    line_height_in = (font_size * 1.25) / 72
-    capacity = max(1, math.floor(height_in / line_height_in))
-    return needed_lines <= capacity
+    return needed_lines
+
+
+def _chars_per_line(shape: Any, font_size: int) -> int:
+    width_in = max(shape.width / EMU_PER_INCH, 0.1)
+    return max(1, int((width_in * 72) / (font_size * 0.55)))
+
+
+def _line_height_in(font_size: int) -> float:
+    return (font_size * 1.25) / 72
 
 
 def _bool(value: Any) -> bool:

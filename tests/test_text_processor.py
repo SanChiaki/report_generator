@@ -41,14 +41,20 @@ def test_apply_text_preserves_existing_run_style(simple_template_bytes):
     assert updated_run.font.size == original_size
 
 
-def test_apply_text_preserve_style_rejects_when_original_font_cannot_fit(simple_template_bytes):
+def test_apply_text_preserve_style_expands_height_when_original_font_cannot_fit(simple_template_bytes):
     doc = PptxDocument.open(simple_template_bytes)
     shape = doc.shape_index()["text.summary"].shape
+    original_run = shape.text_frame.paragraphs[0].runs[0]
+    original_size = original_run.font.size
+    original_width = shape.width
+    original_height = shape.height
 
-    with pytest.raises(ReportGenerationError) as exc:
-        apply_text(shape, text_component(preserve_style=True), "超长内容" * 80)
+    apply_text(shape, text_component(preserve_style=True), "超长内容" * 80)
 
-    assert exc.value.error_code == ErrorCode.TEXT_OVERFLOW
+    updated_run = shape.text_frame.paragraphs[0].runs[0]
+    assert shape.width == original_width
+    assert shape.height > original_height
+    assert updated_run.font.size == original_size
 
 
 def test_apply_text_shrinks_long_content(simple_template_bytes):
@@ -61,14 +67,17 @@ def test_apply_text_shrinks_long_content(simple_template_bytes):
     assert shape.text_frame.paragraphs[0].runs[0].font.size >= Pt(8)
 
 
-def test_apply_text_raises_when_content_cannot_fit(simple_template_bytes):
+def test_apply_text_expands_height_when_content_cannot_fit_original_box(simple_template_bytes):
     doc = PptxDocument.open(simple_template_bytes)
     shape = doc.shape_index()["text.summary"].shape
+    original_width = shape.width
+    original_height = shape.height
 
-    with pytest.raises(ReportGenerationError) as exc:
-        apply_text(shape, text_component(min_font_size=16), "超长内容" * 400)
+    apply_text(shape, text_component(min_font_size=16), "超长内容" * 400)
 
-    assert exc.value.error_code == ErrorCode.TEXT_OVERFLOW
+    assert shape.width == original_width
+    assert shape.height > original_height
+    assert shape.text_frame.paragraphs[0].runs[0].font.size == Pt(16)
 
 
 def test_apply_text_supports_rich_text_runs_with_explicit_styles(simple_template_bytes):
