@@ -1,3 +1,5 @@
+from copy import deepcopy
+
 import pytest
 from pptx.dml.color import RGBColor
 
@@ -102,6 +104,34 @@ def test_apply_table_appends_rows_in_place_when_columns_fit(simple_template_byte
     assert updated_shape.table.cell(3, 0).text == "资源风险"
     assert updated_shape.table.cell(3, 0).fill.fore_color.rgb == body_fill
     assert updated_shape.table.cell(3, 0).text_frame.paragraphs[0].runs[0].font.bold == body_bold
+
+
+def test_apply_table_removes_extra_template_rows_when_data_has_fewer_rows(simple_template_bytes):
+    doc = PptxDocument.open(simple_template_bytes)
+    shape = doc.shape_index()["table.top_risks"].shape
+    original_shape_id = shape.shape_id
+    template_body_height = shape.table.rows[1].height
+    shape.table.cell(1, 0).fill.solid()
+    shape.table.cell(1, 0).fill.fore_color.rgb = RGBColor(0xAB, 0xCD, 0xEF)
+    body_fill = shape.table.cell(1, 0).fill.fore_color.rgb
+    for row_index in range(2):
+        shape.table._tbl.append(deepcopy(shape.table.rows[1]._tr))
+        shape.table.cell(row_index + 2, 0).text = f"旧类型{row_index + 1}"
+        shape.table.cell(row_index + 2, 1).text = f"旧描述{row_index + 1}"
+    data = [{"风险类型": "延期风险", "风险描述": "设备到货存在延期风险"}]
+
+    updated_shape = apply_table(
+        doc,
+        shape,
+        table_component(order=["风险类型", "风险描述"], max_rows=3),
+        data,
+    )
+
+    assert updated_shape.shape_id == original_shape_id
+    assert len(updated_shape.table.rows) == 2
+    assert updated_shape.height == updated_shape.table.rows[0].height + template_body_height
+    assert updated_shape.table.cell(1, 0).text == "延期风险"
+    assert updated_shape.table.cell(1, 0).fill.fore_color.rgb == body_fill
 
 
 def test_apply_table_rejects_too_many_rows(simple_template_bytes):

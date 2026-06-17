@@ -151,8 +151,10 @@ def _normalize_issues(component: ComponentMapping, value: Any) -> list[dict[str,
 
 def _remove_preview_parts(doc: PptxDocument, slide: Any, component_location: str) -> None:
     preview_prefix = f"{component_location}.preview."
+    item_prefix = f"{component_location}.item_"
     for preview_shape in list(slide.shapes):
-        if str(getattr(preview_shape, "name", "")).startswith(preview_prefix):
+        shape_name = str(getattr(preview_shape, "name", ""))
+        if shape_name.startswith(preview_prefix) or shape_name.startswith(item_prefix):
             doc.remove_shape(preview_shape)
 
 

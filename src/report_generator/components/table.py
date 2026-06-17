@@ -139,11 +139,10 @@ def _apply_table_with_row_append(
 
     while len(table.rows) < row_count:
         _append_table_row(table)
+    while len(table.rows) > row_count:
+        _remove_last_table_row(table)
 
     _write_cells(table, table_data)
-    for row_index in range(row_count, len(table.rows)):
-        for col_index in range(len(table.columns)):
-            _replace_cell_text_preserving_style(table.cell(row_index, col_index), "")
     for row_index in range(row_count):
         for col_index in range(column_count, len(table.columns)):
             _replace_cell_text_preserving_style(table.cell(row_index, col_index), "")
@@ -158,6 +157,11 @@ def _apply_table_with_row_append(
 def _append_table_row(table: Any) -> None:
     source_row = table.rows[len(table.rows) - 1]
     table._tbl.append(deepcopy(source_row._tr))
+
+
+def _remove_last_table_row(table: Any) -> None:
+    last_row = table.rows[len(table.rows) - 1]
+    table._tbl.remove(last_row._tr)
 
 
 def _copy_table_style(source_table: Any, target_table: Any, width: int, height: int) -> None:
