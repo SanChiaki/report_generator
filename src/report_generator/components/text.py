@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import math
+from copy import deepcopy
 from collections.abc import Mapping
 from typing import Any
 
@@ -9,6 +10,7 @@ from pptx.util import Pt
 
 from report_generator.errors import ErrorCode, ReportGenerationError
 from report_generator.models import ComponentMapping
+from report_generator.pptx.text import set_run_typeface
 
 EMU_PER_INCH = 914400
 
@@ -29,7 +31,12 @@ def apply_text(shape: Any, component: ComponentMapping, value: Any) -> None:
         if not _fits(shape, text, start_font_size):
             shape.height = _required_height(shape, text, start_font_size)
         if rich_text is not None:
-            _apply_rich_text(shape, rich_text, preserve_style=True)
+            _apply_rich_text(
+                shape,
+                rich_text,
+                preserve_style=True,
+                base_run_properties=_first_run_properties(shape.text_frame),
+            )
             return
         _apply_text_preserving_style(shape, text)
         return
@@ -82,6 +89,7 @@ def _apply_rich_text(
     *,
     preserve_style: bool = False,
     default_font_size: int | None = None,
+    base_run_properties: Any | None = None,
 ) -> None:
     text_frame = shape.text_frame
     text_frame.clear()
@@ -92,6 +100,7 @@ def _apply_rich_text(
             if index > 0:
                 paragraph = text_frame.add_paragraph()
             run = paragraph.add_run()
+            _copy_run_properties(base_run_properties, run)
             run.text = piece
             _apply_run_style(run, item, default_font_size=default_font_size, preserve_style=preserve_style)
 
@@ -108,7 +117,7 @@ def _apply_run_style(
     elif default_font_size is not None and not preserve_style:
         run.font.size = Pt(default_font_size)
     if style.get("font_name"):
-        run.font.name = str(style["font_name"])
+        set_run_typeface(run, str(style["font_name"]))
     if "bold" in style:
         run.font.bold = _bool(style["bold"])
     if "italic" in style:
@@ -122,6 +131,7 @@ def _apply_run_style(
 def _apply_text_preserving_style(shape: Any, text: str) -> None:
     text_frame = shape.text_frame
     lines = text.splitlines() or [""]
+    base_run_properties = _first_run_properties(text_frame)
     for paragraph_index, line in enumerate(lines):
         if paragraph_index < len(text_frame.paragraphs):
             paragraph = text_frame.paragraphs[paragraph_index]
@@ -132,7 +142,9 @@ def _apply_text_preserving_style(shape: Any, text: str) -> None:
             for run in paragraph.runs[1:]:
                 run.text = ""
         else:
-            paragraph.add_run().text = line
+            run = paragraph.add_run()
+            _copy_run_properties(base_run_properties, run)
+            run.text = line
 
     for paragraph in text_frame.paragraphs[len(lines) :]:
         for run in paragraph.runs:
@@ -145,6 +157,23 @@ def _existing_font_size(shape: Any) -> int | None:
             if run.font.size is not None:
                 return int(round(run.font.size.pt))
     return None
+
+
+def _first_run_properties(text_frame: Any) -> Any | None:
+    for paragraph in text_frame.paragraphs:
+        for run in paragraph.runs:
+            return getattr(run._r, "rPr", None)
+    return None
+
+
+def _copy_run_properties(source_r_pr: Any | None, target_run: Any) -> None:
+    if source_r_pr is None:
+        return
+    target_r = target_run._r
+    target_r_pr = getattr(target_r, "rPr", None)
+    if target_r_pr is not None:
+        target_r.remove(target_r_pr)
+    target_r.insert(0, deepcopy(source_r_pr))
 
 
 def _fit_font_size(shape: Any, text: str, start: int, minimum: int) -> int | None:

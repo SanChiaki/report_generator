@@ -6,6 +6,7 @@ from report_generator.components.text import apply_text
 from report_generator.errors import ErrorCode, ReportGenerationError
 from report_generator.models import ComponentMapping
 from report_generator.pptx.document import PptxDocument
+from report_generator.pptx.text import set_run_typeface
 
 
 def text_component(**config):
@@ -55,6 +56,29 @@ def test_apply_text_preserve_style_expands_height_when_original_font_cannot_fit(
     assert shape.width == original_width
     assert shape.height > original_height
     assert updated_run.font.size == original_size
+
+
+def test_apply_text_preserve_style_keeps_font_for_newline_paragraphs(simple_template_bytes):
+    doc = PptxDocument.open(simple_template_bytes)
+    shape = doc.shape_index()["text.summary"].shape
+    original_run = shape.text_frame.paragraphs[0].runs[0]
+    set_run_typeface(original_run, "Microsoft YaHei")
+
+    apply_text(shape, text_component(preserve_style=True), "第一行\n第二行")
+
+    first_run = shape.text_frame.paragraphs[0].runs[0]
+    second_run = shape.text_frame.paragraphs[1].runs[0]
+    assert shape.text_frame.text == "第一行\n第二行"
+    assert _typefaces(first_run) == {
+        "latin": "Microsoft YaHei",
+        "ea": "Microsoft YaHei",
+        "cs": "Microsoft YaHei",
+    }
+    assert _typefaces(second_run) == {
+        "latin": "Microsoft YaHei",
+        "ea": "Microsoft YaHei",
+        "cs": "Microsoft YaHei",
+    }
 
 
 def test_apply_text_shrinks_long_content(simple_template_bytes):
@@ -160,3 +184,45 @@ def test_apply_text_supports_newlines_inside_rich_text(simple_template_bytes):
     assert [run.text for run in shape.text_frame.paragraphs[1].runs] == ["第二行"]
     assert shape.text_frame.paragraphs[0].runs[0].font.color.rgb == RGBColor(0x00, 0x52, 0xCC)
     assert shape.text_frame.paragraphs[1].runs[0].font.color.rgb == RGBColor(0x33, 0x33, 0x33)
+
+
+def test_apply_text_preserve_style_rich_text_keeps_font_for_newline_paragraphs(simple_template_bytes):
+    doc = PptxDocument.open(simple_template_bytes)
+    shape = doc.shape_index()["text.summary"].shape
+    original_run = shape.text_frame.paragraphs[0].runs[0]
+    set_run_typeface(original_run, "Microsoft YaHei")
+
+    apply_text(
+        shape,
+        text_component(preserve_style=True),
+        {
+            "rich_text": [
+                {"text": "关键结论：", "color": "0052CC", "bold": True},
+                {"text": "第一行\n第二行", "color": "333333"},
+            ]
+        },
+    )
+
+    first_line_value_run = shape.text_frame.paragraphs[0].runs[1]
+    second_line_run = shape.text_frame.paragraphs[1].runs[0]
+    assert shape.text_frame.text == "关键结论：第一行\n第二行"
+    assert _typefaces(first_line_value_run) == {
+        "latin": "Microsoft YaHei",
+        "ea": "Microsoft YaHei",
+        "cs": "Microsoft YaHei",
+    }
+    assert _typefaces(second_line_run) == {
+        "latin": "Microsoft YaHei",
+        "ea": "Microsoft YaHei",
+        "cs": "Microsoft YaHei",
+    }
+
+
+def _typefaces(run):
+    r_pr = run._r.rPr
+    values = {}
+    for child in r_pr:
+        tag = child.tag
+        if tag.endswith(("}latin", "}ea", "}cs")):
+            values[tag.split("}", 1)[1]] = child.get("typeface")
+    return values
